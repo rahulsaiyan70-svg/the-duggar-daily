@@ -1,1 +1,157 @@
 
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Duggar Daily — Mega News Portal Prototype</title>
+<style>
+:root{
+ --bg:#f4f6f9;--card:#fff;--text:#151b26;--muted:#687385;--line:#e4e8ee;
+ --brand:#b5121b;--brand2:#8e0e15;--dark:#111827;--blue:#1455c0;--green:#087f5b;
+}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,Arial,sans-serif}
+button,input,select{font:inherit}.top{background:#111;color:#fff;font-size:13px;padding:7px 0}.wrap{max-width:1250px;margin:auto;padding:0 18px}
+.top .wrap{display:flex;justify-content:space-between}.date{opacity:.8}
+header{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+.head{height:82px;display:flex;align-items:center;gap:22px}.logo{font-family:Georgia,serif;font-size:31px;font-weight:900;letter-spacing:-1.3px}.logo span{color:var(--brand)}
+.tagline{color:var(--muted);font-size:12px;border-left:1px solid var(--line);padding-left:18px}.search{margin-left:auto;display:flex}.search input{width:230px;padding:10px 12px;border:1px solid var(--line);border-radius:8px 0 0 8px}.search button{border:0;background:var(--dark);color:#fff;padding:0 15px;border-radius:0 8px 8px 0}
+nav{background:var(--dark);color:#fff}.nav{display:flex;overflow:auto;white-space:nowrap}.nav button{background:none;border:0;color:#fff;padding:13px 15px;cursor:pointer}.nav button:hover,.nav .active{background:var(--brand)}
+.breaking{background:var(--brand);color:#fff}.breaking .wrap{display:flex;align-items:center;gap:15px;min-height:42px}.breaking b{background:#fff;color:var(--brand);padding:5px 9px;border-radius:4px;font-size:12px}.ticker{overflow:hidden;white-space:nowrap;flex:1}
+main{padding:20px 0}.gridhero{display:grid;grid-template-columns:1.8fr 1fr;gap:16px}.hero,.sidecard,.section,.article,.video,.ad,.admin{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}.hero{position:relative;min-height:390px;background:linear-gradient(135deg,#1f2937,#6b7280)}.hero .image{height:100%;min-height:390px;background:linear-gradient(120deg,#25334a,#8c99a8);display:flex;align-items:center;justify-content:center;color:#fff;font-size:70px}.heroText{position:absolute;bottom:0;left:0;right:0;padding:28px;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.86))}.label{display:inline-block;background:var(--brand);color:#fff;font-size:11px;font-weight:700;padding:5px 8px;border-radius:4px;text-transform:uppercase}.hero h1{font:700 31px/1.12 Georgia,serif;margin:10px 0}.meta{font-size:12px;color:var(--muted)}.hero .meta{color:#ddd}
+.side{display:grid;gap:12px}.sidecard{padding:15px}.sidecard h3{margin:0 0 9px;font-size:17px}.story{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--line)}.story:first-of-type{border-top:0}.thumb{width:82px;height:62px;background:#dce2ea;border-radius:7px;flex:none;display:flex;align-items:center;justify-content:center;color:#7b8797}.story b{font-size:14px;line-height:1.25}.story small{display:block;color:var(--muted);margin-top:5px}
+.layout{display:grid;grid-template-columns:2.1fr .8fr;gap:16px;margin-top:18px}.section{padding:18px}.sectionTitle{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--dark);margin-bottom:8px}.sectionTitle h2{font:700 23px Georgia,serif;margin:0 0 8px}.more{color:var(--brand);font-size:12px;font-weight:700;cursor:pointer}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.card{border-bottom:1px solid var(--line);padding-bottom:12px}.photo{height:135px;background:#dce2ea;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#758196;margin-bottom:9px}.card h3{font:700 18px/1.2 Georgia,serif;margin:0 0 7px}.card p{font-size:13px;color:var(--muted);margin:0}.list{display:grid;gap:0}.listItem{padding:13px 0;border-bottom:1px solid var(--line)}.listItem b{font-size:15px}.listItem small{display:block;color:var(--muted);margin-top:5px}
+.ad{min-height:180px;padding:18px;display:flex;align-items:center;justify-content:center;color:#9aa3af;background:#fafafa;margin-bottom:16px}.poll{padding:16px}.poll h3{margin-top:0}.poll label{display:block;padding:8px 0}.poll button{margin-top:8px;background:var(--brand);color:#fff;border:0;border-radius:7px;padding:9px 13px}
+.full{margin-top:18px}.videoGrid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:14px}.videoBox{height:180px;background:#202938;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:35px}.video h3{font-size:16px;margin:8px 0}
+.articlePage{display:none}.article{padding:24px}.article h1{font:700 38px/1.12 Georgia,serif;margin:8px 0 12px}.articleHero{height:380px;background:#cbd2dc;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:80px;color:#7a8596;margin:18px 0}.articleBody{max-width:820px;font:18px/1.7 Georgia,serif}.articleBody p{margin:16px 0}.share{display:flex;gap:8px}.share button{border:1px solid var(--line);background:#fff;border-radius:7px;padding:8px 12px}
+.admin{display:none;padding:20px}.admin h2{margin-top:0}.adminGrid{display:grid;grid-template-columns:220px 1fr;gap:16px}.adminMenu{background:#111827;color:#fff;border-radius:10px;padding:10px}.adminMenu button{width:100%;text-align:left;background:none;border:0;color:#fff;padding:11px;border-radius:6px}.adminMenu button:hover{background:#374151}.form{border:1px solid var(--line);padding:18px;border-radius:10px}.form input,.form select,.form textarea{width:100%;padding:11px;border:1px solid var(--line);border-radius:7px;margin:7px 0 14px}.form textarea{height:160px}.publish{background:var(--brand);color:#fff;border:0;padding:11px 18px;border-radius:7px;font-weight:700}
+footer{background:#111827;color:#fff;margin-top:30px;padding:38px 0}.footgrid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:25px}.footerTitle{font:700 20px Georgia,serif}.footerText{color:#aeb6c2;font-size:13px;line-height:1.6}
+.toast{position:fixed;right:18px;bottom:18px;background:#111827;color:#fff;padding:13px 17px;border-radius:8px;display:none;z-index:50}
+@media(max-width:850px){.head{height:auto;padding:13px 0;flex-wrap:wrap}.tagline{display:none}.search{width:100%;margin-left:0}.search input{width:100%}.gridhero,.layout,.adminGrid{grid-template-columns:1fr}.cards{grid-template-columns:1fr 1fr}.videoGrid{grid-template-columns:1fr}.footgrid{grid-template-columns:1fr 1fr}.hero h1{font-size:25px}}
+@media(max-width:520px){.cards{grid-template-columns:1fr}.logo{font-size:25px}.hero,.hero .image{min-height:330px}.article h1{font-size:29px}}
+</style>
+</head>
+<body>
+<div class="top"><div class="wrap"><span>Tuesday, 22 September 2026</span><span>Jammu & Kashmir • English</span></div></div>
+
+<header>
+ <div class="wrap head">
+  <div class="logo">THE <span>DUGGAR DAILY</span></div>
+  <div class="tagline">News from Jammu & Kashmir</div>
+  <div class="search"><input id="search" placeholder="Search news..."><button onclick="searchNews()">🔍</button></div>
+ </div>
+</header>
+
+<nav><div class="wrap nav" id="nav">
+ <button class="active" onclick="home()">Home</button><button onclick="filterNews('Jammu')">Jammu</button><button onclick="filterNews('Kashmir')">Kashmir</button><button onclick="filterNews('Samba')">Samba</button><button onclick="filterNews('Kathua')">Kathua</button><button onclick="filterNews('Udhampur')">Udhampur</button><button onclick="filterNews('Rajouri')">Rajouri</button><button onclick="filterNews('Politics')">Politics</button><button onclick="filterNews('Business')">Business</button><button onclick="filterNews('Sports')">Sports</button><button onclick="filterNews('Education')">Education</button><button onclick="filterNews('Crime')">Crime</button><button onclick="filterNews('Weather')">Weather</button><button onclick="filterNews('Jobs')">Jobs</button><button onclick="showAdmin()">Admin Demo</button>
+</div></nav>
+
+<div class="breaking"><div class="wrap"><b>BREAKING</b><div class="ticker">Demo headline: Important update from Jammu & Kashmir • Traffic advisory issued • Weather alert information • More updates coming in</div></div></div>
+
+<main class="wrap">
+ <div id="homePage">
+  <section class="gridhero">
+   <div class="hero" onclick="openArticle(0)">
+    <div class="image">📰</div>
+    <div class="heroText"><span class="label">Jammu</span><h1>Major regional update: authorities issue fresh advisory for residents</h1><div class="meta">2 hours ago • The Duggar Daily Desk</div></div>
+   </div>
+   <div class="side">
+    <div class="sidecard"><h3>Latest News</h3>
+      <div class="story" onclick="openArticle(1)"><div class="thumb">IMG</div><div><b>Fresh administrative update announced in Jammu</b><small>35 min ago</small></div></div>
+      <div class="story" onclick="openArticle(2)"><div class="thumb">IMG</div><div><b>Weather department issues new forecast</b><small>52 min ago</small></div></div>
+      <div class="story" onclick="openArticle(3)"><div class="thumb">IMG</div><div><b>Education department releases important notice</b><small>1 hour ago</small></div></div>
+    </div>
+    <div class="sidecard"><h3>Most Read</h3><div class="listItem"><b>1. Today's top local stories</b></div><div class="listItem"><b>2. Highway traffic update</b></div><div class="listItem"><b>3. New government notification</b></div></div>
+   </div>
+  </section>
+
+  <div class="layout">
+   <div>
+    <section class="section"><div class="sectionTitle"><h2>Jammu News</h2><span class="more" onclick="filterNews('Jammu')">VIEW ALL →</span></div><div class="cards" id="jammuCards"></div></section>
+    <section class="section full"><div class="sectionTitle"><h2>Kashmir News</h2><span class="more" onclick="filterNews('Kashmir')">VIEW ALL →</span></div><div class="cards" id="kashmirCards"></div></section>
+    <section class="section full"><div class="sectionTitle"><h2>District News</h2><span class="more">VIEW ALL →</span></div><div class="cards" id="districtCards"></div></section>
+    <section class="section full"><div class="sectionTitle"><h2>Videos</h2><span class="more">VIEW ALL →</span></div><div class="videoGrid"><div class="video"><div class="videoBox">▶</div><h3>Today's J&K news bulletin</h3></div><div class="video"><div class="videoBox">▶</div><h3>Ground report: Jammu</h3></div><div class="video"><div class="videoBox">▶</div><h3>Explainer: What happened today?</h3></div></div></section>
+   </div>
+   <aside>
+    <div class="ad">ADVERTISEMENT<br>300 × 250</div>
+    <div class="section"><div class="sectionTitle"><h2>Top Stories</h2></div><div id="topStories" class="list"></div></div>
+    <div class="section full poll"><h3>Quick Poll</h3><p>What should we cover more?</p><label><input type="radio" name="p"> Local civic issues</label><label><input type="radio" name="p"> Jobs & education</label><label><input type="radio" name="p"> Business</label><button onclick="vote()">Vote</button></div>
+    <div class="ad">ADVERTISEMENT<br>300 × 600</div>
+   </aside>
+  </div>
+ </div>
+
+ <div id="articlePage" class="articlePage">
+  <div class="article">
+   <button onclick="home()">← Back to Home</button><br><br>
+   <span class="label" id="aCat">Jammu</span><h1 id="aTitle"></h1><div class="meta" id="aMeta"></div>
+   <div class="share"><button onclick="share()">Share</button><button onclick="alert('Print demo')">Print</button><button onclick="alert('Bookmark demo')">🔖 Bookmark</button></div>
+   <div class="articleHero">📰</div><div class="articleBody" id="aBody"></div>
+  </div>
+ </div>
+
+ <div id="adminPage" class="admin">
+  <h2>Newsroom Admin — Prototype</h2>
+  <p class="meta">This demonstrates how your editors/reporters could publish stories without editing website code.</p>
+  <div class="adminGrid">
+   <div class="adminMenu"><button>📊 Dashboard</button><button>✍️ New Article</button><button>📝 Drafts</button><button>🟢 Published</button><button>🔴 Breaking News</button><button>🖼️ Media Library</button><button>👥 Reporters</button><button>📈 Analytics</button><button>💰 Advertisements</button></div>
+   <div class="form">
+    <h3>Create New Article</h3>
+    <label>Headline</label><input id="newTitle" placeholder="Enter headline">
+    <label>Category</label><select id="newCat"><option>Jammu</option><option>Kashmir</option><option>Politics</option><option>Business</option><option>Sports</option><option>Education</option><option>Crime</option><option>Weather</option><option>Jobs</option></select>
+    <label>Location</label><input placeholder="e.g. Jammu">
+    <label>Featured Image</label><input type="file">
+    <label>Article</label><textarea placeholder="Write or paste verified news copy..."></textarea>
+    <label><input type="checkbox"> Mark as Breaking News</label><br><br>
+    <button class="publish" onclick="publishDemo()">PUBLISH ARTICLE</button>
+   </div>
+  </div>
+ </div>
+</main>
+
+<footer><div class="wrap footgrid"><div><div class="footerTitle">THE DUGGAR DAILY</div><p class="footerText">A prototype for a Jammu & Kashmir digital news publication. In production, editorial policies, source verification, corrections, privacy, copyright and applicable digital-media compliance should be built into the newsroom workflow.</p></div><div><b>Jammu</b><p class="footerText">City • Samba • Kathua<br>Udhampur • Rajouri • Poonch</p></div><div><b>Sections</b><p class="footerText">Politics • Business<br>Sports • Education<br>Crime • Jobs</p></div><div><b>Contact</b><p class="footerText">Newsroom<br>Advertising<br>Corrections<br>About Us</p></div></div></footer>
+<div class="toast" id="toast"></div>
+
+<script>
+const stories=[
+ {cat:'Jammu',title:'Major regional update: authorities issue fresh advisory for residents',time:'2 hours ago'},
+ {cat:'Jammu',title:'Fresh administrative update announced in Jammu',time:'35 min ago'},
+ {cat:'Weather',title:'Weather department issues new forecast',time:'52 min ago'},
+ {cat:'Education',title:'Education department releases important notice',time:'1 hour ago'},
+ {cat:'Kashmir',title:'Important development reported from Kashmir Valley',time:'1 hour ago'},
+ {cat:'Kashmir',title:'Officials review arrangements ahead of upcoming programme',time:'2 hours ago'},
+ {cat:'Samba',title:'District administration reviews public services',time:'3 hours ago'},
+ {cat:'Kathua',title:'Local authorities announce civic update',time:'3 hours ago'},
+ {cat:'Udhampur',title:'New public facility update released',time:'4 hours ago'},
+ {cat:'Rajouri',title:'District-level meeting held on development issues',time:'4 hours ago'},
+ {cat:'Politics',title:'Political parties respond to latest regional issue',time:'5 hours ago'},
+ {cat:'Business',title:'Local business community discusses new opportunities',time:'5 hours ago'},
+ {cat:'Sports',title:'J&K athletes prepare for upcoming competition',time:'6 hours ago'},
+ {cat:'Jobs',title:'New recruitment-related information released',time:'6 hours ago'}
+];
+function card(s,i){return `<div class="card" onclick="openArticle(${i})"><div class="photo">PHOTO</div><span class="label">${s.cat}</span><h3>${s.title}</h3><p>${s.time} • The Duggar Daily</p></div>`}
+function renderHome(){
+ document.getElementById('jammuCards').innerHTML=stories.filter(x=>x.cat==='Jammu').map((x)=>card(x,stories.indexOf(x))).join('');
+ document.getElementById('kashmirCards').innerHTML=stories.filter(x=>x.cat==='Kashmir').map(x=>card(x,stories.indexOf(x))).join('');
+ document.getElementById('districtCards').innerHTML=stories.filter(x=>['Samba','Kathua','Udhampur','Rajouri'].includes(x.cat)).map(x=>card(x,stories.indexOf(x))).join('');
+ document.getElementById('topStories').innerHTML=stories.slice(0,7).map((x,i)=>`<div class="listItem" onclick="openArticle(${i})"><b>${i+1}. ${x.title}</b><small>${x.time}</small></div>`).join('');
+}
+function openArticle(i){
+ const s=stories[i];homeHide();document.getElementById('articlePage').style.display='block';
+ document.getElementById('aCat').textContent=s.cat;document.getElementById('aTitle').textContent=s.title;document.getElementById('aMeta').textContent=s.time+' • The Duggar Daily Desk';
+ document.getElementById('aBody').innerHTML=`<p><b>Jammu & Kashmir:</b> This is a prototype article page for The Duggar Daily. In the live version, the newsroom would insert verified reporting, attribution, photographs and relevant official documents.</p><p>The article layout is designed for fast reading on mobile and desktop. Related stories, source links, correction information and social sharing can be added below the story.</p><p><b>Editorial note:</b> All factual claims in the production version should be checked against reliable sources before publication. Allegations should be attributed, and corrections should be visible when required.</p><p>More updates will be added as the story develops.</p>`;
+ window.scrollTo({top:0,behavior:'smooth'});
+}
+function homeHide(){document.getElementById('homePage').style.display='none';document.getElementById('adminPage').style.display='none';document.getElementById('articlePage').style.display='block'}
+function home(){document.getElementById('homePage').style.display='block';document.getElementById('articlePage').style.display='none';document.getElementById('adminPage').style.display='none';window.scrollTo({top:0,behavior:'smooth'})}
+function showAdmin(){document.getElementById('homePage').style.display='none';document.getElementById('articlePage').style.display='none';document.getElementById('adminPage').style.display='block';window.scrollTo({top:0,behavior:'smooth'})}
+function filterNews(cat){home();let matched=stories.filter(x=>x.cat===cat);toast(cat+' section selected — '+matched.length+' demo stories');}
+function searchNews(){let q=document.getElementById('search').value.toLowerCase();if(!q){toast('Type a keyword to search');return}let m=stories.filter(x=>(x.title+' '+x.cat).toLowerCase().includes(q));toast(m.length+' demo stories match “'+q+'”');}
+function vote(){toast('Thank you — demo vote recorded')}
+function share(){navigator.clipboard?.writeText(location.href);toast('Article link copied (demo)')}
+function publishDemo(){let t=document.getElementById('newTitle').value||'New demo article';toast('Published: '+t);document.getElementById('newTitle').value=''}
+function toast(t){let e=document.getElementById('toast');e.textContent=t;e.style.display='block';setTimeout(()=>e.style.display='none',2600)}
+renderHome();
+</script>
+</body>
+</html>
