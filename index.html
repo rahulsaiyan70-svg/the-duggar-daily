@@ -3,183 +3,201 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>RMA CAD V1</title>
+<title>RMA CAD V2 — Engineering Drafting</title>
 <style>
-:root{--bg:#f4f6f7;--panel:#fff;--line:#d8dee3;--text:#172126;--accent:#2f7d5a;--canvas:#fff}
-*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
-header{height:52px;background:#19352b;color:#fff;display:flex;align-items:center;padding:0 14px;gap:18px}
-.logo{font-weight:700;font-size:18px;white-space:nowrap}.menu{display:flex;gap:6px}.menu button{background:transparent;border:0;color:#fff;padding:8px 10px;cursor:pointer;border-radius:5px}.menu button:hover{background:#285444}
-.app{height:calc(100vh - 52px);display:flex}
-.left{width:64px;background:#fff;border-right:1px solid var(--line);padding:7px 5px;display:flex;flex-direction:column;gap:5px}
-.tool{height:43px;border:1px solid transparent;background:#fff;border-radius:6px;cursor:pointer;font-size:11px}.tool:hover,.tool.active{background:#e8f3ee;border-color:#9ac7b2;color:#18583e}
-.tool b{display:block;font-size:16px;margin-bottom:2px}.workspace{position:relative;flex:1;background:#ddd;overflow:hidden}
-canvas{position:absolute;inset:0;width:100%;height:100%;background:var(--canvas);cursor:crosshair}
-.right{width:250px;background:#fff;border-left:1px solid var(--line);padding:12px;overflow:auto}
-h3{margin:4px 0 10px;font-size:14px}.group{border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:12px}
-label{display:block;font-size:12px;margin:7px 0 3px}input,select{width:100%;padding:7px;border:1px solid #cbd3d8;border-radius:5px}
-.row{display:flex;gap:6px}.row>*{flex:1}
-button.action{width:100%;padding:8px;border:1px solid #bfc8cd;border-radius:5px;background:#fff;cursor:pointer}.action:hover{background:#f0f3f4}
-.status{position:absolute;left:10px;bottom:10px;background:rgba(255,255,255,.9);border:1px solid #cfd6da;padding:6px 9px;border-radius:5px;font:12px monospace;pointer-events:none}
-#layerList div{padding:5px;border-radius:4px;font-size:12px}.current{background:#e8f3ee;font-weight:600}
-footer{position:fixed;left:64px;right:250px;bottom:0;height:27px;background:#19352b;color:#fff;display:flex;align-items:center;padding:0 10px;font-size:11px;gap:18px}
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center}.modal .box{background:#fff;padding:20px;border-radius:8px;width:340px}.modal h2{margin-top:0}
+:root{--top:#18362c;--top2:#214a3c;--panel:#fff;--bg:#eef1f2;--border:#cbd3d7;--accent:#2f7d5a;--hover:#e7f2ed;--text:#172126}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:var(--text);background:var(--bg);overflow:hidden}
+.top{height:48px;background:var(--top);color:#fff;display:flex;align-items:center;padding:0 12px;gap:15px}.brand{font-weight:700;font-size:17px;white-space:nowrap}.menus{display:flex;height:100%;align-items:center;gap:2px}.menus button,.tab{border:0;background:transparent;color:#fff;padding:8px 9px;cursor:pointer}.menus button:hover{background:var(--top2)}
+.ribbon{height:82px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:stretch;padding:5px 8px;gap:5px;overflow:hidden}
+.rgroup{border-right:1px solid #dde2e5;padding:0 9px;display:flex;align-items:center;gap:3px}.rtitle{position:absolute;margin-top:63px;font-size:10px;color:#667}.rbtn{height:55px;min-width:48px;border:1px solid transparent;background:#fff;border-radius:5px;cursor:pointer;font-size:10px}.rbtn .ico{font-size:22px;display:block;line-height:26px}.rbtn:hover,.rbtn.active{background:var(--hover);border-color:#9dcab6;color:#17573d}
+.main{height:calc(100vh - 157px);display:flex;min-height:300px}
+.side{width:225px;background:#fff;border-right:1px solid var(--border);overflow:auto;padding:8px}.side h3{font-size:12px;margin:7px 4px;color:#3c4b51;text-transform:uppercase;letter-spacing:.5px}
+.toolrow{display:grid;grid-template-columns:1fr 1fr;gap:5px}.stool{padding:8px 6px;border:1px solid #d8dee1;background:#fff;border-radius:5px;text-align:left;cursor:pointer;font-size:11px}.stool:hover,.stool.active{background:var(--hover);border-color:#9dcab6}.stool b{font-size:17px;margin-right:5px}
+.canvaswrap{position:relative;flex:1;background:#dfe3e5;overflow:hidden}canvas{position:absolute;inset:0;width:100%;height:100%;background:#fff}
+.props{width:255px;background:#fff;border-left:1px solid var(--border);padding:10px;overflow:auto}.props h3{font-size:13px;margin:4px 0 10px}.field{margin:8px 0}.field label{font-size:11px;display:block;margin-bottom:3px;color:#56646a}.field input,.field select{width:100%;padding:7px;border:1px solid var(--border);border-radius:4px}.tw{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.command{height:32px;background:#fff;border-top:1px solid var(--border);display:flex;align-items:center;padding:0 8px;gap:7px}.command span{font:12px monospace;color:#56646a}.command input{flex:1;border:1px solid #bfc8cc;border-radius:4px;padding:5px 7px;font:12px monospace}
+.status{position:absolute;left:8px;bottom:8px;background:rgba(255,255,255,.92);border:1px solid #c8d0d4;border-radius:4px;padding:5px 8px;font:11px monospace;pointer-events:none}
+.bottom{height:27px;background:var(--top);color:#fff;display:flex;align-items:center;gap:20px;padding:0 9px;font-size:10px}
+#fileInput{display:none}.hint{font-size:10px;color:#68767b;line-height:1.45}.empty{font-size:11px;color:#7a878b;padding:8px}
 </style>
 </head>
 <body>
-<header>
-<div class="logo">RMA CAD V1</div>
-<div class="menu">
-<button onclick="newDrawing()">File ▾</button>
-<button onclick="undo()">Edit ▾</button>
-<button onclick="fitView()">View ▾</button>
+<div class="top">
+ <div class="brand">RMA CAD V2</div>
+ <div class="menus">
+  <button onclick="newDrawing()">File</button><button onclick="undo()">Edit</button><button onclick="fitView()">View</button>
+  <button onclick="alert('RMA CAD V2: browser-based engineering drafting foundation.')">Help</button>
+ </div>
+ <div style="margin-left:auto;font-size:11px;opacity:.85">Engineering Drafting • mm</div>
 </div>
-<div style="margin-left:auto;font-size:12px;opacity:.9">Browser CAD • RMA Design & Construction</div>
-</header>
 
-<div class="app">
-<aside class="left">
-<button class="tool active" data-tool="select" onclick="setTool('select')"><b>↖</b>Select</button>
-<button class="tool" data-tool="line" onclick="setTool('line')"><b>╱</b>Line</button>
-<button class="tool" data-tool="polyline" onclick="setTool('polyline')"><b>⌁</b>Polyline</button>
-<button class="tool" data-tool="rectangle" onclick="setTool('rectangle')"><b>□</b>Rect</button>
-<button class="tool" data-tool="circle" onclick="setTool('circle')"><b>○</b>Circle</button>
-<button class="tool" data-tool="wall" onclick="setTool('wall')"><b>▣</b>Wall</button>
-<button class="tool" data-tool="column" onclick="setTool('column')"><b>■</b>Column</button>
-<button class="tool" data-tool="beam" onclick="setTool('beam')"><b>━</b>Beam</button>
-<button class="tool" data-tool="dimension" onclick="setTool('dimension')"><b>↔</b>Dim</button>
-<button class="tool" data-tool="erase" onclick="setTool('erase')"><b>⌫</b>Erase</button>
+<div class="ribbon">
+ <div class="rgroup">
+  <button class="rbtn active" data-t="select" onclick="setTool('select')"><span class="ico">↖</span>Select</button>
+  <button class="rbtn" data-t="line" onclick="setTool('line')"><span class="ico">╱</span>Line</button>
+  <button class="rbtn" data-t="polyline" onclick="setTool('polyline')"><span class="ico">⌁</span>Polyline</button>
+  <button class="rbtn" data-t="rectangle" onclick="setTool('rectangle')"><span class="ico">□</span>Rectangle</button>
+  <button class="rbtn" data-t="circle" onclick="setTool('circle')"><span class="ico">○</span>Circle</button>
+ </div>
+ <div class="rgroup">
+  <button class="rbtn" data-t="move" onclick="setTool('move')"><span class="ico">✥</span>Move</button>
+  <button class="rbtn" data-t="copy" onclick="setTool('copy')"><span class="ico">⧉</span>Copy</button>
+  <button class="rbtn" data-t="rotate" onclick="setTool('rotate')"><span class="ico">↻</span>Rotate</button>
+  <button class="rbtn" data-t="mirror" onclick="setTool('mirror')"><span class="ico">⇄</span>Mirror</button>
+  <button class="rbtn" data-t="offset" onclick="setTool('offset')"><span class="ico">▱</span>Offset</button>
+ </div>
+ <div class="rgroup">
+  <button class="rbtn" data-t="trim" onclick="setTool('trim')"><span class="ico">✂</span>Trim</button>
+  <button class="rbtn" data-t="extend" onclick="setTool('extend')"><span class="ico">↔</span>Extend</button>
+  <button class="rbtn" data-t="erase" onclick="setTool('erase')"><span class="ico">⌫</span>Erase</button>
+  <button class="rbtn" data-t="fillet" onclick="setTool('fillet')"><span class="ico">⌒</span>Fillet</button>
+  <button class="rbtn" data-t="hatch" onclick="setTool('hatch')"><span class="ico">▨</span>Hatch</button>
+ </div>
+ <div class="rgroup">
+  <button class="rbtn" data-t="wall" onclick="setTool('wall')"><span class="ico">▣</span>Wall</button>
+  <button class="rbtn" data-t="door" onclick="setTool('door')"><span class="ico">▤</span>Door</button>
+  <button class="rbtn" data-t="window" onclick="setTool('window')"><span class="ico">▥</span>Window</button>
+  <button class="rbtn" data-t="column" onclick="setTool('column')"><span class="ico">■</span>Column</button>
+  <button class="rbtn" data-t="beam" onclick="setTool('beam')"><span class="ico">━</span>Beam</button>
+ </div>
+ <div class="rgroup">
+  <button class="rbtn" data-t="stair" onclick="setTool('stair')"><span class="ico">▤</span>Stair</button>
+  <button class="rbtn" data-t="dimension" onclick="setTool('dimension')"><span class="ico">↔</span>Dimension</button>
+  <button class="rbtn" data-t="text" onclick="setTool('text')"><span class="ico">T</span>Text</button>
+  <button class="rbtn" onclick="undo()"><span class="ico">↶</span>Undo</button>
+  <button class="rbtn" onclick="redo()"><span class="ico">↷</span>Redo</button>
+ </div>
+</div>
+
+<div class="main">
+<aside class="side">
+<h3>Draw</h3><div class="toolrow">
+ <button class="stool" onclick="setTool('line')"><b>╱</b>Line</button><button class="stool" onclick="setTool('polyline')"><b>⌁</b>Polyline</button>
+ <button class="stool" onclick="setTool('arc')"><b>⌒</b>Arc</button><button class="stool" onclick="setTool('circle')"><b>○</b>Circle</button>
+ <button class="stool" onclick="setTool('rectangle')"><b>□</b>Rectangle</button><button class="stool" onclick="setTool('polygon')"><b>⬡</b>Polygon</button>
+</div>
+<h3>Architecture</h3><div class="toolrow">
+ <button class="stool" onclick="setTool('wall')"><b>▣</b>Wall</button><button class="stool" onclick="setTool('door')"><b>▤</b>Door</button>
+ <button class="stool" onclick="setTool('window')"><b>▥</b>Window</button><button class="stool" onclick="setTool('stair')"><b>▤</b>Stair</button>
+ <button class="stool" onclick="setTool('room')"><b>▢</b>Room</button><button class="stool" onclick="setTool('area')"><b>m²</b>Area</button>
+</div>
+<h3>Structure</h3><div class="toolrow">
+ <button class="stool" onclick="setTool('column')"><b>■</b>Column</button><button class="stool" onclick="setTool('beam')"><b>━</b>Beam</button>
+ <button class="stool" onclick="setTool('slab')"><b>▱</b>Slab</button><button class="stool" onclick="setTool('footing')"><b>⊞</b>Footing</button>
+</div>
+<h3>Annotate</h3><div class="toolrow">
+ <button class="stool" onclick="setTool('dimension')"><b>↔</b>Dimension</button><button class="stool" onclick="setTool('text')"><b>T</b>Text</button>
+ <button class="stool" onclick="setTool('leader')"><b>↗</b>Leader</button><button class="stool" onclick="setTool('level')"><b>±</b>Level</button>
+</div>
+<h3>Modify</h3><div class="toolrow">
+ <button class="stool" onclick="setTool('move')"><b>✥</b>Move</button><button class="stool" onclick="setTool('copy')"><b>⧉</b>Copy</button>
+ <button class="stool" onclick="setTool('rotate')"><b>↻</b>Rotate</button><button class="stool" onclick="setTool('mirror')"><b>⇄</b>Mirror</button>
+ <button class="stool" onclick="setTool('offset')"><b>▱</b>Offset</button><button class="stool" onclick="setTool('erase')"><b>⌫</b>Erase</button>
+</div>
 </aside>
 
-<main class="workspace" id="workspace">
+<section class="canvaswrap" id="cw">
 <canvas id="cad"></canvas>
-<div class="status" id="status">X: 0.00  Y: 0.00 | Grid: ON | Snap: ON</div>
-</main>
+<div class="status" id="status">X: 0 Y: 0 | SNAP ON | ORTHO OFF</div>
+</section>
 
-<aside class="right">
-<div class="group">
-<h3>Drawing</h3>
-<div class="row"><button class="action" onclick="undo()">↶ Undo</button><button class="action" onclick="redo()">↷ Redo</button></div>
-<div style="height:6px"></div>
-<div class="row"><button class="action" onclick="saveDrawing()">Save</button><button class="action" onclick="loadDrawing()">Load</button></div>
-<div style="height:6px"></div>
-<button class="action" onclick="exportSVG()">Export SVG</button>
-<div style="height:6px"></div>
-<button class="action" onclick="window.print()">Print / PDF</button>
+<aside class="props">
+<h3>Properties</h3>
+<div class="field"><label>Layer</label><select id="layer" onchange="currentLayer=this.value">
+<option>Architectural</option><option>Structural</option><option>Dimensions</option><option>Furniture</option><option>Text</option>
+</select></div>
+<div class="field"><label>Line type</label><select id="linetype"><option>Continuous</option><option>Dashed</option><option>Center</option><option>Hidden</option></select></div>
+<div class="tw">
+ <div class="field"><label>Wall thickness</label><input id="wallThick" type="number" value="230"></div>
+ <div class="field"><label>Column size</label><input id="colSize" type="number" value="300"></div>
 </div>
-
-<div class="group">
-<h3>View</h3>
-<div class="row"><button class="action" onclick="zoom(1.2)">＋ Zoom</button><button class="action" onclick="zoom(.83)">－ Zoom</button></div>
-<div style="height:6px"></div>
-<button class="action" onclick="fitView()">Fit Drawing</button>
+<div class="tw">
+ <div class="field"><label>Grid</label><input id="grid" type="number" value="100" min="5"></div>
+ <div class="field"><label>Text height</label><input id="textH" type="number" value="250"></div>
 </div>
-
-<div class="group">
-<h3>Settings</h3>
-<label>Grid size</label><input id="grid" type="number" value="100" min="5" step="5" onchange="draw()">
-<label>Wall thickness</label><input id="wallThick" type="number" value="230" min="50" step="10">
-<label>Column width</label><input id="colSize" type="number" value="300" min="100" step="10">
-<label>Layer</label>
-<select id="layer" onchange="currentLayer=this.value;draw()">
-<option>Architectural</option><option>Structural</option><option>Dimensions</option><option>Furniture</option>
-</select>
-<label><input id="snap" type="checkbox" checked onchange="draw()" style="width:auto"> Snap to grid</label>
-<label><input id="gridOn" type="checkbox" checked onchange="draw()" style="width:auto"> Show grid</label>
-</div>
-
-<div class="group">
-<h3>Layers</h3>
-<div id="layerList">
-<div class="current">● Architectural</div><div>● Structural</div><div>● Dimensions</div><div>● Furniture</div>
-</div>
-</div>
-
-<div class="group">
-<h3>Quick info</h3>
-<div style="font-size:12px;line-height:1.5">Click two points to draw. Mouse wheel zooms. Middle mouse or Shift+drag pans. Press Esc to cancel a command.</div>
-</div>
+<div class="field"><label><input id="snap" type="checkbox" checked style="width:auto"> Snap</label></div>
+<div class="field"><label><input id="ortho" type="checkbox" style="width:auto"> Ortho</label></div>
+<div class="field"><label><input id="gridOn" type="checkbox" checked style="width:auto"> Grid</label></div>
+<div class="field"><button class="stool" style="width:100%;text-align:center" onclick="fitView()">Fit drawing</button></div>
+<div class="field"><button class="stool" style="width:100%;text-align:center" onclick="saveDrawing()">Save project</button></div>
+<div class="field"><button class="stool" style="width:100%;text-align:center" onclick="loadDrawing()">Load project</button></div>
+<div class="field"><button class="stool" style="width:100%;text-align:center" onclick="exportSVG()">Export SVG</button></div>
+<div class="field"><button class="stool" style="width:100%;text-align:center" onclick="window.print()">Print / PDF</button></div>
+<p class="hint">Mouse: click points to draw. Wheel = zoom. Middle mouse / Shift-drag = pan. Esc = cancel. Ctrl+Z/Y = undo/redo. Command line accepts LINE, RECT, CIRCLE, WALL, COLUMN, BEAM, DIM, ERASE, etc.</p>
 </aside>
 </div>
-<footer><span id="toolStatus">Command: SELECT</span><span>Units: mm</span><span>Zoom: <span id="zoomText">100%</span></span><span>RMA CAD V1</span></footer>
+<div class="command"><span>Command:</span><input id="cmd" placeholder="Type command, e.g. LINE, RECT, WALL, COLUMN, DIM, ERASE..." autocomplete="off"><span id="coords">X 0 Y 0</span></div>
+<div class="bottom"><span id="toolStatus">READY</span><span>Units: mm</span><span>Snap: ON</span><span>Ortho: OFF</span><span>Zoom: 100%</span><span style="margin-left:auto">RMA CAD V2</span></div>
 
 <script>
-const canvas=document.getElementById('cad'), ctx=canvas.getContext('2d'), workspace=document.getElementById('workspace');
-let W,H, scale=1, ox=80, oy=80, tool='select', currentLayer='Architectural';
-let objects=[], selected=-1, start=null, temp=null, history=[], future=[], panning=false, panLast=null;
+const c=document.getElementById('cad'),ctx=c.getContext('2d'),cw=document.getElementById('cw');
+let W=0,H=0,scale=0.12,ox=90,oy=90,tool='select',start=null,temp=null,objects=[],selected=-1;
+let history=[],future=[],currentLayer='Architectural',last={x:0,y:0},panning=false,panLast=null,moveObj=-1,moveBase=null;
 
-function resize(){const r=workspace.getBoundingClientRect(),d=devicePixelRatio||1;W=r.width;H=r.height;canvas.width=W*d;canvas.height=H*d;canvas.style.width=W+'px';canvas.style.height=H+'px';ctx.setTransform(d,0,0,d,0,0);draw()}
-window.addEventListener('resize',resize); resize();
+function resize(){let r=cw.getBoundingClientRect(),d=devicePixelRatio||1;W=r.width;H=r.height;c.width=W*d;c.height=H*d;c.style.width=W+'px';c.style.height=H+'px';ctx.setTransform(d,0,0,d,0,0);draw()}window.addEventListener('resize',resize);resize();
 
-function world(e){const r=canvas.getBoundingClientRect();let x=(e.clientX-r.left-ox)/scale,y=(e.clientY-r.top-oy)/scale;
- if(document.getElementById('snap').checked){let g=+document.getElementById('grid').value||100;x=Math.round(x/g)*g;y=Math.round(y/g)*g}return{x,y}}
-function screen(p){return{x:p.x*scale+ox,y:p.y*scale+oy}}
-function setTool(t){tool=t;selected=-1;start=null;temp=null;document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active',b.dataset.tool===t));document.getElementById('toolStatus').textContent='Command: '+t.toUpperCase();draw()}
-function pushHistory(){history.push(JSON.stringify(objects));if(history.length>60)history.shift();future=[]}
+function world(e){let r=c.getBoundingClientRect(),x=(e.clientX-r.left-ox)/scale,y=(e.clientY-r.top-oy)/scale;
+ if(document.getElementById('ortho').checked&&start){let dx=x-start.x,dy=y-start.y;if(Math.abs(dx)>Math.abs(dy))y=start.y;else x=start.x}
+ if(document.getElementById('snap').checked){let g=+document.getElementById('grid').value||100;x=Math.round(x/g)*g;y=Math.round(y/g)*g}
+ return{x,y}}
+function S(p){return{x:p.x*scale+ox,y:p.y*scale+oy}}
+function d(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
+function clone(o){return JSON.parse(JSON.stringify(o))}
+function commit(){history.push(JSON.stringify(objects));if(history.length>80)history.shift();future=[]}
+function add(o){commit();objects.push({...o,layer:currentLayer});selected=objects.length-1;draw()}
+function setTool(t){tool=t;start=null;temp=null;moveObj=-1;document.querySelectorAll('.rbtn,.stool').forEach(b=>b.classList.toggle('active',b.dataset.t===t));document.getElementById('toolStatus').textContent='COMMAND: '+t.toUpperCase();draw()}
 function undo(){if(!history.length)return;future.push(JSON.stringify(objects));objects=JSON.parse(history.pop());selected=-1;draw()}
 function redo(){if(!future.length)return;history.push(JSON.stringify(objects));objects=JSON.parse(future.pop());draw()}
-function add(o){pushHistory();objects.push({...o,layer:currentLayer});draw()}
-function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
-function drawGrid(){
- if(!document.getElementById('gridOn').checked)return;
- const g=+document.getElementById('grid').value||100, step=g*scale;ctx.save();ctx.strokeStyle='#edf0f1';ctx.lineWidth=1;
- let x0=((ox%step)+step)%step,y0=((oy%step)+step)%step;
- for(let x=x0;x<W;x+=step){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}
- for(let y=y0;y<H;y+=step){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
- ctx.strokeStyle='#d8dde0';ctx.beginPath();ctx.moveTo(ox,0);ctx.lineTo(ox,H);ctx.moveTo(0,oy);ctx.lineTo(W,oy);ctx.stroke();ctx.restore()
-}
-function line(a,b,width=2,dash=false){let A=screen(a),B=screen(b);ctx.save();ctx.lineWidth=width;ctx.setLineDash(dash?[7,5]:[]);ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();ctx.restore()}
-function rect(a,b,fill=false){let A=screen(a),B=screen(b);ctx.save();ctx.strokeRect(Math.min(A.x,B.x),Math.min(A.y,B.y),Math.abs(B.x-A.x),Math.abs(B.y-A.y));if(fill)ctx.fillRect(Math.min(A.x,B.x),Math.min(A.y,B.y),Math.abs(B.x-A.x),Math.abs(B.y-A.y));ctx.restore()}
-function drawObj(o,i){
- ctx.save();ctx.strokeStyle=o.layer==='Structural'?'#8b3a2b':o.layer==='Dimensions'?'#2f6fa8':'#20282c';ctx.fillStyle=ctx.strokeStyle;ctx.lineWidth=o.type==='wall'||o.type==='beam'?Math.max(1,o.width*scale):2;
- if(i===selected){ctx.strokeStyle='#d17b00';ctx.fillStyle='#d17b00'}
- if(o.type==='line'||o.type==='wall'||o.type==='beam')line(o.a,o.b,ctx.lineWidth);
- else if(o.type==='polyline'){for(let j=1;j<o.pts.length;j++)line(o.pts[j-1],o.pts[j],2)}
- else if(o.type==='rectangle')rect(o.a,o.b)
- else if(o.type==='column'){let s=o.size/2;rect({x:o.a.x-s,y:o.a.y-s},{x:o.a.x+s,y:o.a.y+s},true)}
- else if(o.type==='circle'){let A=screen(o.a);ctx.beginPath();ctx.arc(A.x,A.y,o.r*scale,0,Math.PI*2);ctx.stroke()}
- else if(o.type==='dimension'){line(o.a,o.b,2);let A=screen(o.a),B=screen(o.b);ctx.beginPath();ctx.arc(A.x,A.y,4,0,Math.PI*2);ctx.arc(B.x,B.y,4,0,Math.PI*2);ctx.stroke();ctx.font='12px Arial';ctx.fillText((dist(o.a,o.b)/1000).toFixed(2)+' m',(A.x+B.x)/2+5,(A.y+B.y)/2-5)}
- ctx.restore()
-}
-function draw(){ctx.clearRect(0,0,W,H);drawGrid();objects.forEach(drawObj);if(temp){ctx.save();ctx.strokeStyle='#2f7d5a';ctx.setLineDash([5,5]);if(temp.type==='line'||temp.type==='wall'||temp.type==='beam'||temp.type==='dimension')line(temp.a,temp.b,2,true);else if(temp.type==='rectangle')rect(temp.a,temp.b);else if(temp.type==='circle'){let A=screen(temp.a);ctx.beginPath();ctx.arc(A.x,A.y,temp.r*scale,0,Math.PI*2);ctx.stroke()}ctx.restore()}document.getElementById('zoomText').textContent=Math.round(scale*100)+'%';updateStatus()}
-function updateStatus(){let p=lastPoint||{x:0,y:0};document.getElementById('status').textContent=`X: ${p.x.toFixed(0)}  Y: ${p.y.toFixed(0)} | Grid: ${document.getElementById('gridOn').checked?'ON':'OFF'} | Snap: ${document.getElementById('snap').checked?'ON':'OFF'}`}
-let lastPoint={x:0,y:0};
 
-canvas.addEventListener('mousemove',e=>{if(panning){ox+=e.clientX-panLast.x;oy+=e.clientY-panLast.y;panLast={x:e.clientX,y:e.clientY};draw();return}let p=world(e);lastPoint=p;if(start){if(tool==='circle')temp={type:'circle',a:start,r:dist(start,p)};else temp={type:tool==='wall'?'wall':tool,a:start,b:p,width:tool==='wall'?(+document.getElementById('wallThick').value/2):tool==='beam'?0.2:2}}draw()});
-canvas.addEventListener('mousedown',e=>{
+function grid(){if(!document.getElementById('gridOn').checked)return;let g=+document.getElementById('grid').value||100,step=g*scale;ctx.save();ctx.strokeStyle='#edf0f1';ctx.lineWidth=1;let x0=((ox%step)+step)%step,y0=((oy%step)+step)%step;for(let x=x0;x<W;x+=step){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}for(let y=y0;y<H;y+=step){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}ctx.restore()}
+function seg(a,b,w=2,dash=false,col='#263238'){let A=S(a),B=S(b);ctx.save();ctx.strokeStyle=col;ctx.lineWidth=Math.max(1,w*scale);ctx.setLineDash(dash?[6,5]:[]);ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();ctx.restore()}
+function rect(a,b,col='#263238',fill=false,w=2){let A=S(a),B=S(b),x=Math.min(A.x,B.x),y=Math.min(A.y,B.y),ww=Math.abs(B.x-A.x),hh=Math.abs(B.y-A.y);ctx.save();ctx.strokeStyle=col;ctx.lineWidth=w;if(fill)ctx.fillStyle=col;ctx.strokeRect(x,y,ww,hh);if(fill)ctx.fillRect(x,y,ww,hh);ctx.restore()}
+function drawObj(o,i){let col=o.layer==='Structural'?'#8b3a2b':o.layer==='Dimensions'?'#286a9c':'#263238';if(i===selected)col='#d17a00';
+ if(o.type==='line'||o.type==='wall'||o.type==='beam')seg(o.a,o.b,o.type==='wall'?o.width:o.type==='beam'?o.width:2,false,col);
+ else if(o.type==='rectangle'||o.type==='room'||o.type==='slab'||o.type==='footing')rect(o.a,o.b,col,false,2);
+ else if(o.type==='column'){let q=o.size/2;rect({x:o.a.x-q,y:o.a.y-q},{x:o.a.x+q,y:o.a.y+q},col,true)}
+ else if(o.type==='circle'){let A=S(o.a);ctx.save();ctx.strokeStyle=col;ctx.lineWidth=2;ctx.beginPath();ctx.arc(A.x,A.y,o.r*scale,0,Math.PI*2);ctx.stroke();ctx.restore()}
+ else if(o.type==='polyline'){for(let j=1;j<o.pts.length;j++)seg(o.pts[j-1],o.pts[j],2,false,col)}
+ else if(o.type==='door'){seg(o.a,o.b,25,false,col);let r=d(o.a,o.b),A=S(o.a);ctx.save();ctx.strokeStyle=col;ctx.beginPath();ctx.arc(A.x,A.y,r*scale,0,Math.PI/2);ctx.stroke();ctx.restore()}
+ else if(o.type==='window'){seg(o.a,o.b,80,false,col);seg({x:o.a.x,y:o.a.y-40},{x:o.b.x,y:o.b.y-40},2,false,'#5b89a5');seg({x:o.a.x,y:o.a.y+40},{x:o.b.x,y:o.b.y+40},2,false,'#5b89a5')}
+ else if(o.type==='stair'){let A=S(o.a),B=S(o.b);ctx.save();ctx.strokeStyle=col;for(let k=0;k<8;k++){let t=k/8;ctx.beginPath();ctx.moveTo(A.x+(B.x-A.x)*t,A.y+(B.y-A.y)*t);ctx.lineTo(A.x+(B.x-A.x)*(t+.12),A.y+(B.y-A.y)*(t+.12));ctx.stroke()}ctx.restore()}
+ else if(o.type==='dimension'){seg(o.a,o.b,2,false,col);let A=S(o.a),B=S(o.b);ctx.save();ctx.fillStyle=col;ctx.font='12px Arial';ctx.fillText((d(o.a,o.b)).toFixed(0)+' mm',(A.x+B.x)/2+5,(A.y+B.y)/2-5);ctx.restore()}
+ else if(o.type==='text'){let A=S(o.a);ctx.save();ctx.fillStyle=col;ctx.font=Math.max(10,o.h*scale)+'px Arial';ctx.fillText(o.text,A.x,A.y);ctx.restore()}
+}
+function draw(){ctx.clearRect(0,0,W,H);grid();objects.forEach(drawObj);if(temp){if(temp.type==='circle'){let A=S(temp.a);ctx.save();ctx.strokeStyle='#2f7d5a';ctx.setLineDash([5,5]);ctx.beginPath();ctx.arc(A.x,A.y,temp.r*scale,0,Math.PI*2);ctx.stroke();ctx.restore()}else if(temp.a&&temp.b)seg(temp.a,temp.b,2,true,'#2f7d5a');else if(temp.type==='rectangle')rect(temp.a,temp.b,'#2f7d5a',false,2)}document.getElementById('coords').textContent=`X ${Math.round(last.x)} Y ${Math.round(last.y)}`;document.querySelector('.bottom span:nth-child(5)').textContent='Zoom: '+Math.round(scale*100)+'%'}
+function hit(p){let best=-1,bd=Infinity;objects.forEach((o,i)=>{let q=999999;if(o.a&&o.b)q=pointLine(p,o.a,o.b);else if(o.a&&o.r)q=Math.abs(d(p,o.a)-o.r);else if(o.a&&o.size)q=d(p,o.a);if(q<bd&&q<Math.max(250,15/scale)){bd=q;best=i}});return best}
+function pointLine(p,a,b){let dx=b.x-a.x,dy=b.y-a.y,t=((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy||1);t=Math.max(0,Math.min(1,t));return Math.hypot(p.x-(a.x+t*dx),p.y-(a.y+t*dy))}
+function zoom(f,center){let cx=W/2,cy=H/2;if(center){let r=c.getBoundingClientRect();cx=center.x-r.left;cy=center.y-r.top}let wx=(cx-ox)/scale,wy=(cy-oy)/scale;scale=Math.max(.03,Math.min(10,scale*f));ox=cx-wx*scale;oy=cy-wy*scale;draw()}
+function fitView(){if(!objects.length){scale=.12;ox=90;oy=90;draw();return}let xs=[],ys=[];objects.forEach(o=>{if(o.a){xs.push(o.a.x);ys.push(o.a.y)}if(o.b){xs.push(o.b.x);ys.push(o.b.y)}if(o.pts)o.pts.forEach(p=>{xs.push(p.x);ys.push(p.y)})});let minx=Math.min(...xs),maxx=Math.max(...xs),miny=Math.min(...ys),maxy=Math.max(...ys),ww=Math.max(100,maxx-minx),hh=Math.max(100,maxy-miny);scale=Math.min((W-120)/ww,(H-120)/hh);scale=Math.max(.03,Math.min(3,scale));ox=W/2-(minx+maxx)/2*scale;oy=H/2-(miny+maxy)/2*scale;draw()}
+
+c.addEventListener('mousemove',e=>{if(panning){ox+=e.clientX-panLast.x;oy+=e.clientY-panLast.y;panLast={x:e.clientX,y:e.clientY};draw();return}last=world(e);if(start){if(tool==='circle')temp={type:'circle',a:start,r:d(start,last)};else temp={type:tool,a:start,b:last,width:tool==='wall'?+document.getElementById('wallThick').value:tool==='beam'?+document.getElementById('colSize').value/2:2}}draw()});
+c.addEventListener('mousedown',e=>{
  if(e.button===1||e.shiftKey){panning=true;panLast={x:e.clientX,y:e.clientY};return}
  let p=world(e);
  if(tool==='select'){selected=hit(p);draw();return}
- if(tool==='erase'){let h=hit(p);if(h>=0){pushHistory();objects.splice(h,1);selected=-1;draw()}return}
+ if(tool==='erase'){let h=hit(p);if(h>=0){commit();objects.splice(h,1);selected=-1;draw()}return}
+ if(tool==='move'||tool==='copy'){let h=hit(p);if(h>=0){moveObj=h;moveBase=p;if(tool==='copy'){commit();objects.push(clone(objects[h]));moveObj=objects.length-1}start=p;draw()}return}
+ if(tool==='text'){let text=prompt('Enter text:','RMA CAD');if(text!==null)add({type:'text',a:p,text,h:+document.getElementById('textH').value});return}
  if(tool==='column'){add({type:'column',a:p,size:+document.getElementById('colSize').value});return}
+ if(tool==='polygon'){if(!start){start=p;temp={type:'rectangle',a:p,b:p}}else{add({type:'rectangle',a:start,b:p});start=null;temp=null}return}
  if(tool==='polyline'){if(!start){start=p;temp={type:'polyline',pts:[p]}}else{temp.pts.push(p)}draw();return}
- if(!start){start=p;temp=null}else{let o;
-  if(tool==='line'||tool==='wall'||tool==='beam'||tool==='dimension')o={type:tool==='wall'?'wall':tool,a:start,b:p,width:tool==='wall'?+document.getElementById('wallThick').value:tool==='beam'?+document.getElementById('colSize').value/2:2};
-  if(tool==='rectangle')o={type:'rectangle',a:start,b:p};
-  if(tool==='circle')o={type:'circle',a:start,r:dist(start,p)};
-  if(o)add(o);start=null;temp=null; if(tool==='dimension')setTool('select');
- }
+ if(!start){start=p;return}
+ let o=null;
+ if(['line','wall','beam','dimension','door','window','stair','rectangle','room','area','slab','footing'].includes(tool))o={type:tool,a:start,b:p,width:tool==='wall'?+document.getElementById('wallThick').value:tool==='beam'?+document.getElementById('colSize').value/2:2};
+ if(tool==='circle')o={type:'circle',a:start,r:d(start,p)};
+ if(o){if(tool==='area'){o.type='rectangle'}add(o)}start=null;temp=null;if(tool==='dimension')setTool('select')
 });
-canvas.addEventListener('dblclick',e=>{if(tool==='polyline'&&temp){add({type:'polyline',pts:temp.pts});start=null;temp=null;setTool('select')}});
-canvas.addEventListener('mouseup',e=>{if(e.button===1||e.shiftKey)panning=false});
-canvas.addEventListener('wheel',e=>{e.preventDefault();zoom(e.deltaY<0?1.12:.89,{x:e.clientX,y:e.clientY})},{passive:false});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){start=null;temp=null;setTool('select')}if((e.ctrlKey||e.metaKey)&&e.key==='z')undo();if((e.ctrlKey||e.metaKey)&&e.key==='y')redo()});
+c.addEventListener('dblclick',e=>{if(tool==='polyline'&&temp){add({type:'polyline',pts:temp.pts});start=null;temp=null;setTool('select')}});
+c.addEventListener('mouseup',e=>{if(e.button===1||e.shiftKey)panning=false});
+c.addEventListener('wheel',e=>{e.preventDefault();zoom(e.deltaY<0?1.12:.89,{x:e.clientX,y:e.clientY})},{passive:false});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){start=null;temp=null;setTool('select')}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z')undo();if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y')redo()});
 
-function hit(p){let best=-1,bd=Infinity;objects.forEach((o,i)=>{let d=999999;if(o.type==='column')d=dist(p,o.a)-o.size/2;else if(o.type==='circle')d=Math.abs(dist(p,o.a)-o.r);else if(o.a&&o.b)d=pointLine(p,o.a,o.b);if(d<bd&&d<300){bd=d;best=i}});return best}
-function pointLine(p,a,b){let dx=b.x-a.x,dy=b.y-a.y,t=((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy||1);t=Math.max(0,Math.min(1,t));return Math.hypot(p.x-(a.x+t*dx),p.y-(a.y+t*dy))}
-function zoom(f,center){if(center){let r=canvas.getBoundingClientRect(),cx=center.x-r.left,cy=center.y-r.top;ox=cx-(cx-ox)*f;oy=cy-(cy-oy)*f}else{ox=W/2-(W/2-ox)*f;oy=H/2-(H/2-oy)*f}scale=Math.max(.1,Math.min(8,scale*f));draw()}
-function fitView(){if(!objects.length){scale=1;ox=80;oy=80;draw();return}let xs=[],ys=[];objects.forEach(o=>{if(o.a){xs.push(o.a.x);ys.push(o.a.y)}if(o.b){xs.push(o.b.x);ys.push(o.b.y)}if(o.pts)o.pts.forEach(p=>{xs.push(p.x);ys.push(p.y)})});let minx=Math.min(...xs),maxx=Math.max(...xs),miny=Math.min(...ys),maxy=Math.max(...ys),cw=Math.max(100,maxx-minx),ch=Math.max(100,maxy-miny);scale=Math.min((W-120)/cw,(H-120)/ch);scale=Math.max(.1,Math.min(4,scale));ox=W/2-(minx+maxx)/2*scale;oy=H/2-(miny+maxy)/2*scale;draw()}
+const cmd=document.getElementById('cmd');cmd.addEventListener('keydown',e=>{if(e.key!=='Enter')return;let v=cmd.value.trim().toLowerCase();cmd.value='';let map={l:'line',line:'line',pl:'polyline',polyline:'polyline',rec:'rectangle',rect:'rectangle',rectangle:'rectangle',c:'circle',circle:'circle',w:'wall',wall:'wall',col:'column',column:'column',b:'beam',beam:'beam',dim:'dimension',dimension:'dimension',d:'dimension',erase:'erase',e:'erase',move:'move',copy:'copy',rotate:'rotate',mirror:'mirror',offset:'offset',text:'text',door:'door',window:'window',stair:'stair'};setTool(map[v]||'select')});
+
 function newDrawing(){if(confirm('Start a new drawing?')){objects=[];history=[];future=[];selected=-1;draw()}}
-function saveDrawing(){localStorage.setItem('rmaCAD',JSON.stringify({objects,scale,ox,oy,currentLayer}));alert('Drawing saved in this browser.')}
-function loadDrawing(){let s=localStorage.getItem('rmaCAD');if(!s)return alert('No saved drawing found.');let d=JSON.parse(s);objects=d.objects||[];scale=d.scale||1;ox=d.ox||80;oy=d.oy||80;currentLayer=d.currentLayer||'Architectural';document.getElementById('layer').value=currentLayer;draw()}
-function exportSVG(){
- let out=`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800"><rect width="100%" height="100%" fill="white">`;
- objects.forEach(o=>{let col=o.layer==='Structural'?'#8b3a2b':'#20282c';
-  if(o.type==='line'||o.type==='wall'||o.type==='beam')out+=`<line x1="${o.a.x}" y1="${o.a.y}" x2="${o.b.x}" y2="${o.b.y}" stroke="${col}" stroke-width="${o.width||2}"/>`;
-  if(o.type==='rectangle')out+=`<rect x="${Math.min(o.a.x,o.b.x)}" y="${Math.min(o.a.y,o.b.y)}" width="${Math.abs(o.b.x-o.a.x)}" height="${Math.abs(o.b.y-o.a.y)}" fill="none" stroke="${col}"/>`;
-  if(o.type==='circle')out+=`<circle cx="${o.a.x}" cy="${o.a.y}" r="${o.r}" fill="none" stroke="${col}"/>`;
-  if(o.type==='column')out+=`<rect x="${o.a.x-o.size/2}" y="${o.a.y-o.size/2}" width="${o.size}" height="${o.size}" fill="${col}"/>`;
- });out+='</svg>';let blob=new Blob([out],{type:'image/svg+xml'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='RMA-CAD-drawing.svg';a.click();URL.revokeObjectURL(a.href)
-}
+function saveDrawing(){localStorage.setItem('rmaCADV2',JSON.stringify({objects,scale,ox,oy,currentLayer}));alert('RMA CAD V2 project saved in this browser.')}
+function loadDrawing(){let s=localStorage.getItem('rmaCADV2');if(!s)return alert('No saved project found.');let x=JSON.parse(s);objects=x.objects||[];scale=x.scale||.12;ox=x.ox||90;oy=x.oy||90;currentLayer=x.currentLayer||'Architectural';document.getElementById('layer').value=currentLayer;draw()}
+function exportSVG(){let out=`<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="1400" viewBox="0 0 2000 1400"><rect width="100%" height="100%" fill="white"/>`;objects.forEach(o=>{let col=o.layer==='Structural'?'#8b3a2b':'#263238';if(o.type==='line'||o.type==='wall'||o.type==='beam')out+=`<line x1="${o.a.x}" y1="${o.a.y}" x2="${o.b.x}" y2="${o.b.y}" stroke="${col}" stroke-width="${o.width||2}"/>`;if(o.type==='rectangle'||o.type==='room'||o.type==='slab'||o.type==='footing')out+=`<rect x="${Math.min(o.a.x,o.b.x)}" y="${Math.min(o.a.y,o.b.y)}" width="${Math.abs(o.b.x-o.a.x)}" height="${Math.abs(o.b.y-o.a.y)}" fill="none" stroke="${col}"/>`;if(o.type==='circle')out+=`<circle cx="${o.a.x}" cy="${o.a.y}" r="${o.r}" fill="none" stroke="${col}"/>`;if(o.type==='column')out+=`<rect x="${o.a.x-o.size/2}" y="${o.a.y-o.size/2}" width="${o.size}" height="${o.size}" fill="${col}"/>`;if(o.type==='text')out+=`<text x="${o.a.x}" y="${o.a.y}" font-size="${o.h}" fill="${col}">${String(o.text).replace(/[<>&]/g,m=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[m]))}</text>`});out+='</svg>';let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([out],{type:'image/svg+xml'}));a.download='RMA-CAD-V2.svg';a.click()}
 </script>
 </body>
 </html>
