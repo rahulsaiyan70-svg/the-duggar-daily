@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>RMA CAD V2 — Engineering Drafting</title>
+<title>RMA CAD V3 — Engineering Drafting (Fixed Interaction)</title>
 <style>
 :root{--top:#18362c;--top2:#214a3c;--panel:#fff;--bg:#eef1f2;--border:#cbd3d7;--accent:#2f7d5a;--hover:#e7f2ed;--text:#172126}
 *{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:var(--text);background:var(--bg);overflow:hidden}
@@ -23,7 +23,7 @@
 </head>
 <body>
 <div class="top">
- <div class="brand">RMA CAD V2</div>
+ <div class="brand">RMA CAD V3</div>
  <div class="menus">
   <button onclick="newDrawing()">File</button><button onclick="undo()">Edit</button><button onclick="fitView()">View</button>
   <button onclick="alert('RMA CAD V2: browser-based engineering drafting foundation.')">Help</button>
@@ -127,7 +127,7 @@
 </aside>
 </div>
 <div class="command"><span>Command:</span><input id="cmd" placeholder="Type command, e.g. LINE, RECT, WALL, COLUMN, DIM, ERASE..." autocomplete="off"><span id="coords">X 0 Y 0</span></div>
-<div class="bottom"><span id="toolStatus">READY</span><span>Units: mm</span><span>Snap: ON</span><span>Ortho: OFF</span><span>Zoom: 100%</span><span style="margin-left:auto">RMA CAD V2</span></div>
+<div class="bottom"><span id="toolStatus">READY</span><span>Units: mm</span><span>Snap: ON</span><span>Ortho: OFF</span><span>Zoom: 100%</span><span style="margin-left:auto">RMA CAD V3</span></div>
 
 <script>
 const c=document.getElementById('cad'),ctx=c.getContext('2d'),cw=document.getElementById('cw');
@@ -219,5 +219,595 @@ function exportSVG(){let out=`<svg xmlns="http://www.w3.org/2000/svg" width="200
  </div>
 </div>
 <div id="cmdHelp">F2: Command Palette &nbsp; | &nbsp; Esc: Cancel/Close &nbsp; | &nbsp; Enter: Run command</div>
+
+<style id="rma-v3-fix-css">
+/* V3 FIX PACK — keeps V3 UI, adds real CAD-style interaction */
+#cad{cursor:none!important}
+#cad:focus{outline:none}
+#cadToolbarFix{position:absolute;right:10px;top:10px;z-index:20;display:flex;gap:5px;pointer-events:auto}
+.cadToggle{border:1px solid #b8c3c7;background:#fff;border-radius:5px;padding:6px 10px;font:11px Arial;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.cadToggle.on{background:#18362c;color:#fff;border-color:#18362c}
+#cadCursorFix{position:absolute;z-index:18;pointer-events:none;display:none}
+#cadCursorFix .h,#cadCursorFix .v{position:absolute;background:#18362c}
+#cadCursorFix .h{height:1px;width:42px;left:-21px;top:0}
+#cadCursorFix .v{width:1px;height:42px;left:0;top:-21px}
+#cadCursorFix .box{position:absolute;left:-5px;top:-5px;width:10px;height:10px;border:1px solid #18362c;background:rgba(255,255,255,.15)}
+#cadCursorFix .ap{position:absolute;left:-13px;top:-13px;width:26px;height:26px;border:1px solid rgba(24,54,44,.45)}
+#cadSnapMark{position:absolute;z-index:19;pointer-events:none;display:none;font:bold 14px Arial;color:#d17a00;text-shadow:0 0 2px #fff}
+.rmaGrip{position:absolute;width:7px;height:7px;background:#fff;border:1px solid #d17a00;box-sizing:border-box;pointer-events:none;z-index:17}
+#rmaCommandPrompt{position:absolute;left:10px;bottom:34px;z-index:16;background:rgba(255,255,255,.96);border:1px solid #aeb9bd;border-radius:4px;padding:6px 9px;font:12px monospace;color:#263238;display:none;pointer-events:none}
+</style>
+
+<div id="cadToolbarFix">
+  <button id="snapBtnFix" class="cadToggle on" title="F3">SNAP: ON</button>
+  <button id="orthoBtnFix" class="cadToggle" title="F8">ORTHO: OFF</button>
+  <button id="gridBtnFix" class="cadToggle on" title="F7">GRID: ON</button>
+</div>
+<div id="cadCursorFix"><div class="h"></div><div class="v"></div><div class="box"></div><div class="ap"></div></div>
+<div id="cadSnapMark"></div>
+<div id="rmaCommandPrompt"></div>
+
+<script id="rma-v3-fix-js">
+/* ============================================================
+   RMA CAD V3 — FIX PACK
+   V3 remains the base. This layer adds:
+   1) Working SNAP / ORTHO / GRID buttons + F3/F7/F8
+   2) AutoCAD-style crosshair + aperture + object snap marker
+   3) Selection + endpoint/midpoint/center grips
+   4) Working command palette (F2)
+   5) Reliable command state machine for the main V3 commands
+   6) Basic MOVE/COPY/ROTATE/MIRROR/OFFSET/TRIM/EXTEND/FILLET/HATCH
+   ============================================================ */
+
+(function(){
+  const C = document.getElementById('cad');
+  const CW = document.getElementById('cw');
+  const cursor = document.getElementById('cadCursorFix');
+  const snapMark = document.getElementById('cadSnapMark');
+  const promptBox = document.getElementById('rmaCommandPrompt');
+  const snapBtn = document.getElementById('snapBtnFix');
+  const orthoBtn = document.getElementById('orthoBtnFix');
+  const gridBtn = document.getElementById('gridBtnFix');
+
+  let fixSnap = true, fixOrtho = false, fixGrid = true;
+  let hoverObj = -1, hoverSnap = null;
+  let selectedIds = [];
+  let activeOp = null;
+  let opStep = 0;
+  let opData = {};
+  let lastCommand = '';
+
+  const alias = {
+    l:'line',line:'line',
+    pl:'polyline',pline:'polyline',polyline:'polyline',
+    a:'arc',arc:'arc',
+    c:'circle',circle:'circle',
+    rec:'rectangle',rect:'rectangle',rectangle:'rectangle',
+    pol:'polygon',polygon:'polygon',
+    w:'wall',wall:'wall',
+    d:'dimension',dim:'dimension',dimension:'dimension',
+    e:'erase',erase:'erase',
+    m:'move',move:'move',
+    co:'copy',copy:'copy',
+    ro:'rotate',rotate:'rotate',
+    mi:'mirror',mirror:'mirror',
+    o:'offset',offset:'offset',
+    tr:'trim',trim:'trim',
+    ex:'extend',extend:'extend',
+    f:'fillet',fillet:'fillet',
+    h:'hatch',hatch:'hatch',
+    t:'text',text:'text',mtext:'text',
+    dr:'door',door:'door',
+    wi:'window',window:'window',
+    col:'column',column:'column',
+    b:'beam',beam:'beam',
+    st:'stair',stair:'stair',
+    room:'room',area:'area',slab:'slab',footing:'footing',
+    leader:'leader',le:'leader',level:'level',
+    z:'zoom',zoom:'zoom',
+    regen:'regen',redraw:'regen',
+    u:'undo',undo:'undo',
+    redo:'redo'
+  };
+
+  const commandList = [
+    ['LINE','L','Draw a line'],
+    ['POLYLINE','PL','Draw connected segments'],
+    ['ARC','A','Draw an arc'],
+    ['CIRCLE','C','Draw a circle'],
+    ['RECTANGLE','REC','Draw a rectangle'],
+    ['POLYGON','POL','Draw a polygon'],
+    ['WALL','W','Draw a wall'],
+    ['DOOR','DR','Draw a door'],
+    ['WINDOW','WI','Draw a window'],
+    ['COLUMN','COL','Place a column'],
+    ['BEAM','B','Draw a beam'],
+    ['STAIR','ST','Draw stairs'],
+    ['ROOM','ROOM','Draw room'],
+    ['SLAB','SLAB','Draw slab'],
+    ['FOOTING','FOOTING','Draw footing'],
+    ['DIMENSION','DIM','Create dimension'],
+    ['TEXT','T','Add text'],
+    ['LEADER','LE','Create leader'],
+    ['MOVE','M','Move selected object'],
+    ['COPY','CO','Copy selected object'],
+    ['ROTATE','RO','Rotate selected object'],
+    ['MIRROR','MI','Mirror selected object'],
+    ['OFFSET','O','Offset line'],
+    ['TRIM','TR','Trim line'],
+    ['EXTEND','EX','Extend line'],
+    ['FILLET','F','Round two lines'],
+    ['HATCH','H','Hatch a rectangle'],
+    ['ERASE','E','Erase selected object'],
+    ['ZOOM','Z','Zoom/fit'],
+    ['UNDO','U','Undo'],
+    ['REDO','REDO','Redo']
+  ];
+
+  function setToggleUI(){
+    snapBtn.classList.toggle('on',fixSnap); snapBtn.textContent='SNAP: '+(fixSnap?'ON':'OFF');
+    orthoBtn.classList.toggle('on',fixOrtho); orthoBtn.textContent='ORTHO: '+(fixOrtho?'ON':'OFF');
+    gridBtn.classList.toggle('on',fixGrid); gridBtn.textContent='GRID: '+(fixGrid?'ON':'OFF');
+    const s=document.getElementById('snap'); if(s) s.checked=fixSnap;
+    const o=document.getElementById('ortho'); if(o) o.checked=fixOrtho;
+    const g=document.getElementById('gridOn'); if(g) g.checked=fixGrid;
+    const bottom=document.querySelector('.bottom');
+    if(bottom){
+      const spans=bottom.querySelectorAll('span');
+      if(spans[2]) spans[2].textContent='Snap: '+(fixSnap?'ON':'OFF');
+      if(spans[3]) spans[3].textContent='Ortho: '+(fixOrtho?'ON':'OFF');
+    }
+    draw();
+  }
+  snapBtn.onclick=()=>{fixSnap=!fixSnap;setToggleUI()};
+  orthoBtn.onclick=()=>{fixOrtho=!fixOrtho;setToggleUI()};
+  gridBtn.onclick=()=>{fixGrid=!fixGrid;setToggleUI()};
+
+  function baseWorld(e){
+    const r=C.getBoundingClientRect();
+    return {x:(e.clientX-r.left-ox)/scale,y:(e.clientY-r.top-oy)/scale};
+  }
+  function nearestPoint(p,a,b){
+    const dx=b.x-a.x,dy=b.y-a.y,den=dx*dx+dy*dy||1;
+    let t=((p.x-a.x)*dx+(p.y-a.y)*dy)/den;
+    t=Math.max(0,Math.min(1,t));
+    return {x:a.x+t*dx,y:a.y+t*dy,t};
+  }
+  function objectSnaps(p){
+    if(!fixSnap) return {p,kind:'NONE'};
+    let best=null,bd=Infinity, tol=Math.max(180,18/scale);
+    objects.forEach((o,i)=>{
+      if(o.a && o.b){
+        const pts=[
+          {p:o.a,kind:'END',mark:'□'},
+          {p:o.b,kind:'END',mark:'□'},
+          {p:{x:(o.a.x+o.b.x)/2,y:(o.a.y+o.b.y)/2},kind:'MID',mark:'△'},
+          {p:nearestPoint(p,o.a,o.b),kind:'NEAR',mark:'◇'}
+        ];
+        pts.forEach(q=>{let dd=d(p,q.p);if(dd<bd&&dd<tol){bd=dd;best={...q,idx:i}}});
+        if(Math.abs(p.x-o.a.x)<tol && Math.abs(p.y-o.b.y)<tol){}
+      } else if(o.a && o.r){
+        const ang=Math.atan2(p.y-o.a.y,p.x-o.a.x);
+        const q={x:o.a.x+o.r*Math.cos(ang),y:o.a.y+o.r*Math.sin(ang)};
+        const dd=d(p,q); if(dd<bd&&dd<tol){bd=dd;best={p:q,kind:'NEAR',mark:'◇',idx:i}};
+        if(d(p,o.a)<bd&&d(p,o.a)<tol){bd=d(p,o.a);best={p:o.a,kind:'CENTER',mark:'⊙',idx:i}}
+      } else if(o.a && o.size){
+        const pts=[
+          {x:o.a.x-o.size/2,y:o.a.y-o.size/2},
+          {x:o.a.x+o.size/2,y:o.a.y-o.size/2},
+          {x:o.a.x+o.size/2,y:o.a.y+o.size/2},
+          {x:o.a.x-o.size/2,y:o.a.y+o.size/2},
+          o.a
+        ];
+        pts.forEach((q,k)=>{let dd=d(p,q);if(dd<bd&&dd<tol){bd=dd;best={p:q,kind:k===4?'CENTER':'END',mark:k===4?'⊙':'□',idx:i}}});
+      }
+    });
+    if(best) return best;
+    const g=+document.getElementById('grid').value||100;
+    return {p:{x:Math.round(p.x/g)*g,y:Math.round(p.y/g)*g},kind:'GRID',mark:'+'};
+  }
+
+  function fixWorld(e, applyOrtho=true){
+    let p=baseWorld(e);
+    const snap=objectSnaps(p);
+    p={...snap.p};
+    if(applyOrtho && fixOrtho && start){
+      const dx=p.x-start.x,dy=p.y-start.y;
+      if(Math.abs(dx)>=Math.abs(dy)) p.y=start.y; else p.x=start.x;
+    }
+    hoverSnap={...snap,p};
+    return p;
+  }
+
+  function showCursor(e){
+    const r=C.getBoundingClientRect();
+    const x=e.clientX-r.left,y=e.clientY-r.top;
+    cursor.style.display='block'; cursor.style.left=x+'px'; cursor.style.top=y+'px';
+    if(hoverSnap && hoverSnap.kind && hoverSnap.kind!=='NONE'){
+      snapMark.style.display='block'; snapMark.style.left=(x+10)+'px'; snapMark.style.top=(y-10)+'px';
+      snapMark.textContent=hoverSnap.mark+' '+hoverSnap.kind;
+    } else snapMark.style.display='none';
+  }
+
+  function prompt(s){
+    promptBox.textContent=s; promptBox.style.display='block';
+    document.getElementById('toolStatus').textContent=s;
+  }
+  function hidePrompt(){promptBox.style.display='none'}
+
+  function clearSelection(){
+    selectedIds=[]; selected=-1; draw();
+  }
+
+  function addGrip(x,y){
+    const el=document.createElement('div'); el.className='rmaGrip'; el.style.left=(x-3)+'px';el.style.top=(y-3)+'px';
+    CW.appendChild(el); return el;
+  }
+
+  function renderGrips(){
+    CW.querySelectorAll('.rmaGrip').forEach(x=>x.remove());
+    selectedIds.forEach(idx=>{
+      const o=objects[idx]; if(!o)return;
+      const pts=[];
+      if(o.a&&o.b) pts.push(o.a,{x:(o.a.x+o.b.x)/2,y:(o.a.y+o.b.y)/2},o.b);
+      else if(o.a&&o.r){pts.push(o.a,{x:o.a.x+o.r,y:o.a.y})}
+      else if(o.a&&o.size){let q=o.size/2;pts.push({x:o.a.x-q,y:o.a.y-q},{x:o.a.x+q,y:o.a.y-q},{x:o.a.x+q,y:o.a.y+q},{x:o.a.x-q,y:o.a.y+q},o.a)}
+      else if(o.pts) o.pts.forEach(p=>pts.push(p));
+      pts.forEach(p=>{const s=S(p);addGrip(s.x,s.y)});
+    });
+  }
+
+  const oldDraw=window.draw;
+  window.draw=function(){
+    oldDraw();
+    if(hoverObj>=0 && objects[hoverObj] && !selectedIds.includes(hoverObj)){
+      const o=objects[hoverObj];
+      ctx.save();ctx.strokeStyle='#2f7d5a';ctx.lineWidth=4;
+      if(o.a&&o.b){const A=S(o.a),B=S(o.b);ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke()}
+      ctx.restore();
+    }
+    renderGrips();
+  };
+
+  function selectAt(p,additive=false){
+    const h=hit(p);
+    if(h<0){if(!additive)clearSelection();return -1}
+    if(additive){
+      if(selectedIds.includes(h)) selectedIds=selectedIds.filter(x=>x!==h); else selectedIds.push(h);
+    } else selectedIds=[h];
+    selected=selectedIds[0]??-1; draw(); return h;
+  }
+
+  function centroid(o){
+    if(o.a&&o.b)return {x:(o.a.x+o.b.x)/2,y:(o.a.y+o.b.y)/2};
+    if(o.a)return o.a;
+    if(o.pts&&o.pts.length)return o.pts[0];
+    return {x:0,y:0};
+  }
+
+  function translateObj(o,dx,dy){
+    if(o.a){o.a.x+=dx;o.a.y+=dy}
+    if(o.b){o.b.x+=dx;o.b.y+=dy}
+    if(o.pts)o.pts.forEach(p=>{p.x+=dx;p.y+=dy});
+  }
+  function rotatePoint(p,c,a){
+    const x=p.x-c.x,y=p.y-c.y,co=Math.cos(a),si=Math.sin(a);
+    return {x:c.x+x*co-y*si,y:c.y+x*si+y*co};
+  }
+  function rotateObj(o,c,a){
+    if(o.a)o.a=rotatePoint(o.a,c,a);
+    if(o.b)o.b=rotatePoint(o.b,c,a);
+    if(o.pts)o.pts=o.pts.map(p=>rotatePoint(p,c,a));
+  }
+  function mirrorObj(o,a,b){
+    function mir(p){
+      const dx=b.x-a.x,dy=b.y-a.y,L=dx*dx+dy*dy||1;
+      const t=((p.x-a.x)*dx+(p.y-a.y)*dy)/L;
+      const q={x:a.x+t*dx,y:a.y+t*dy};
+      return {x:2*q.x-p.x,y:2*q.y-p.y};
+    }
+    if(o.a)o.a=mir(o.a); if(o.b)o.b=mir(o.b); if(o.pts)o.pts=o.pts.map(mir);
+  }
+
+  function finishOp(){activeOp=null;opStep=0;opData={};start=null;temp=null;hidePrompt();setTool('select');selected=selectedIds[0]??-1;draw()}
+
+  function beginCommand(name){
+    name=(alias[name.toLowerCase()]||name).toLowerCase();
+    lastCommand=name;
+    activeOp=name;opStep=0;opData={};start=null;temp=null;
+    if(name==='undo'){undo();finishOp();return}
+    if(name==='redo'){redo();finishOp();return}
+    if(name==='zoom'){fitView();finishOp();return}
+    if(name==='regen'){draw();finishOp();return}
+    setTool(name);
+    const ptxt={
+      line:'LINE Specify first point:',
+      polyline:'PLINE Specify first point:',
+      arc:'ARC Specify center:',
+      circle:'CIRCLE Specify center:',
+      rectangle:'RECTANGLE Specify first corner:',
+      polygon:'POLYGON Specify first corner:',
+      wall:'WALL Specify start point:',
+      door:'DOOR Specify start point:',
+      window:'WINDOW Specify start point:',
+      column:'COLUMN Specify insertion point:',
+      beam:'BEAM Specify start point:',
+      stair:'STAIR Specify start point:',
+      room:'ROOM Specify first corner:',
+      slab:'SLAB Specify first corner:',
+      footing:'FOOTING Specify center:',
+      dimension:'DIMENSION Specify first point:',
+      text:'TEXT Specify insertion point:',
+      leader:'LEADER Specify start point:',
+      level:'LEVEL Specify point:',
+      move:'MOVE Select object:',
+      copy:'COPY Select object:',
+      rotate:'ROTATE Select object:',
+      mirror:'MIRROR Select object:',
+      offset:'OFFSET Select line:',
+      trim:'TRIM Select object to trim:',
+      extend:'EXTEND Select object to extend:',
+      fillet:'FILLET Select first line:',
+      hatch:'HATCH Select closed rectangle:',
+      erase:'ERASE Select object:'
+    };
+    prompt(ptxt[name]||name.toUpperCase()+' Specify point:');
+  }
+
+  function parseInput(s){
+    s=s.trim();
+    if(!s)return null;
+    if(s.startsWith('@')){
+      s=s.slice(1);
+      const m=s.match(/^([-+]?\d*\.?\d+)\s*[<,]\s*([-+]?\d*\.?\d+)$/);
+      if(m && s.includes('<')){const r=+m[1],a=(+m[2])*Math.PI/180;return {polar:true,r,a}}
+      const xy=s.split(',').map(Number);if(xy.length===2&&xy.every(Number.isFinite))return {relative:true,x:xy[0],y:xy[1]};
+    }
+    if(s.includes('<')){
+      const m=s.match(/^([-+]?\d*\.?\d+)\s*<\s*([-+]?\d*\.?\d+)$/);
+      if(m){return {polarAbs:true,r:+m[1],a:+m[2]*Math.PI/180}}
+    }
+    const xy=s.split(',').map(Number);
+    if(xy.length===2&&xy.every(Number.isFinite))return {abs:true,x:xy[0],y:xy[1]};
+    const n=Number(s); if(Number.isFinite(n))return {number:n};
+    return {text:s};
+  }
+
+  function pointFromParsed(v){
+    if(!v)return null;
+    if(v.abs)return {x:v.x,y:v.y};
+    if(v.relative&&start)return {x:start.x+v.x,y:start.y+v.y};
+    if(v.polar&&start)return {x:start.x+v.r*Math.cos(v.a),y:start.y+v.r*Math.sin(v.a)};
+    if(v.polarAbs&&start)return {x:start.x+v.r*Math.cos(v.a),y:start.y+v.r*Math.sin(v.a)};
+    return null;
+  }
+
+  function opClick(e){
+    const raw=fixWorld(e);
+    const p=raw;
+
+    if(!activeOp){selectAt(p,e.ctrlKey||e.metaKey);return}
+
+    if(['move','copy','rotate','mirror','offset','trim','extend','fillet','hatch','erase'].includes(activeOp) && opStep===0){
+      const h=selectAt(p,false);
+      if(h<0){prompt(activeOp.toUpperCase()+' Select an object:');return}
+      opData.idx=h; opStep=1;
+      if(activeOp==='erase'){commit();objects.splice(h,1);selectedIds=[];finishOp();return}
+      if(activeOp==='move'||activeOp==='copy')prompt(activeOp.toUpperCase()+' Specify base point:');
+      else if(activeOp==='rotate')prompt('ROTATE Specify base point:');
+      else if(activeOp==='mirror')prompt('MIRROR Specify first point of mirror line:');
+      else if(activeOp==='offset')prompt('OFFSET Specify side / distance:');
+      else if(activeOp==='trim')prompt('TRIM Click the segment to trim:');
+      else if(activeOp==='extend')prompt('EXTEND Specify boundary/segment:');
+      else if(activeOp==='fillet')prompt('FILLET Select second line:');
+      else if(activeOp==='hatch'){objects[h].hatch=true;finishOp()}
+      return;
+    }
+
+    if(activeOp==='line'||activeOp==='wall'||activeOp==='door'||activeOp==='window'||activeOp==='beam'||activeOp==='stair'||activeOp==='dimension'||activeOp==='leader'){
+      if(opStep===0){start=p;opStep=1;prompt(activeOp.toUpperCase()+' Specify next point:');return}
+      commit();
+      let width=activeOp==='wall'?+document.getElementById('wallThick').value:activeOp==='beam'?+document.getElementById('colSize').value/2:2;
+      let typ=activeOp;
+      objects.push({type:typ,a:{...start},b:{...p},width,layer:currentLayer});
+      selectedIds=[objects.length-1];finishOp();return;
+    }
+
+    if(activeOp==='circle'){
+      if(opStep===0){start=p;opStep=1;prompt('CIRCLE Specify radius:');return}
+      commit();objects.push({type:'circle',a:{...start},r:d(start,p),layer:currentLayer});selectedIds=[objects.length-1];finishOp();return;
+    }
+
+    if(['rectangle','room','slab'].includes(activeOp)){
+      if(opStep===0){start=p;opStep=1;prompt(activeOp.toUpperCase()+' Specify opposite corner:');return}
+      commit();objects.push({type:activeOp,a:{...start},b:{...p},layer:currentLayer});selectedIds=[objects.length-1];finishOp();return;
+    }
+
+    if(activeOp==='footing'){
+      commit();objects.push({type:'footing',a:{...p},b:{x:p.x+600,y:p.y+600},layer:currentLayer});selectedIds=[objects.length-1];finishOp();return;
+    }
+
+    if(activeOp==='column'){
+      commit();objects.push({type:'column',a:{...p},size:+document.getElementById('colSize').value,layer:currentLayer});selectedIds=[objects.length-1];finishOp();return;
+    }
+
+    if(activeOp==='text'){
+      const tx=prompt('Enter text:','RMA CAD'); if(tx!==null){commit();objects.push({type:'text',a:{...p},text:tx,h:+document.getElementById('textH').value,layer:currentLayer});selectedIds=[objects.length-1]}
+      finishOp();return;
+    }
+
+    if(activeOp==='polyline'){
+      if(opStep===0){start=p;opData.pts=[p];opStep=1;prompt('PLINE Specify next point or press Enter to finish:');return}
+      opData.pts.push(p);start=p;prompt('PLINE Specify next point or press Enter to finish:');return;
+    }
+
+    if(activeOp==='polygon'){
+      if(opStep===0){start=p;opStep=1;prompt('POLYGON Specify opposite corner:');return}
+      commit();objects.push({type:'rectangle',a:{...start},b:{...p},layer:currentLayer,polygon:true});selectedIds=[objects.length-1];finishOp();return;
+    }
+
+    if(activeOp==='arc'){
+      if(opStep===0){start=p;opStep=1;prompt('ARC Specify endpoint:');return}
+      commit();objects.push({type:'arc',a:{...start},b:{...p},r:d(start,p),layer:currentLayer});selectedIds=[objects.length-1];finishOp();return;
+    }
+
+    if(activeOp==='move'||activeOp==='copy'){
+      if(opStep===1){opData.base=p;opStep=2;prompt(activeOp.toUpperCase()+' Specify second point:');return}
+      const dx=p.x-opData.base.x,dy=p.y-opData.base.y;
+      commit();
+      const source=objects[opData.idx];
+      if(activeOp==='copy'){const cp=clone(source);translateObj(cp,dx,dy);objects.push(cp);selectedIds=[objects.length-1]}
+      else {translateObj(source,dx,dy);selectedIds=[opData.idx]}
+      finishOp();return;
+    }
+
+    if(activeOp==='rotate'){
+      if(opStep===1){opData.base=p;opStep=2;prompt('ROTATE Specify rotation angle:');return}
+      let ang=Math.atan2(p.y-opData.base.y,p.x-opData.base.x);
+      commit();rotateObj(objects[opData.idx],opData.base,ang);finishOp();return;
+    }
+
+    if(activeOp==='mirror'){
+      if(opStep===1){opData.p1=p;opStep=2;prompt('MIRROR Specify second point of mirror line:');return}
+      commit();mirrorObj(objects[opData.idx],opData.p1,p);finishOp();return;
+    }
+
+    if(activeOp==='offset'){
+      if(opStep===1){
+        const o=objects[opData.idx];let dist=Number(prompt('Offset distance (mm):','200')); if(!Number.isFinite(dist))dist=200;
+        if(o.a&&o.b){
+          const dx=o.b.x-o.a.x,dy=o.b.y-o.a.y,L=Math.hypot(dx,dy)||1,n={x:-dy/L*dist,y:dx/L*dist};
+          commit();objects.push({...clone(o),a:{x:o.a.x+n.x,y:o.a.y+n.y},b:{x:o.b.x+n.x,y:o.b.y+n.y}});selectedIds=[objects.length-1];
+        }
+        finishOp();return;
+      }
+    }
+
+    if(activeOp==='trim'){
+      const o=objects[opData.idx];if(o&&o.a&&o.b){const mid={x:(o.a.x+o.b.x)/2,y:(o.a.y+o.b.y)/2};const q=nearestPoint(p,o.a,o.b);if(d(p,q)<Math.max(300,20/scale)){commit();if(d(o.a,q)>d(o.b,q))o.b=q;else o.a=q;}}finishOp();return;
+    }
+
+    if(activeOp==='extend'){
+      const o=objects[opData.idx];if(o&&o.a&&o.b){let len=d(o.a,o.b)||1,dx=(o.b.x-o.a.x)/len,dy=(o.b.y-o.a.y)/len;commit();o.b={x:o.b.x+dx*500,y:o.b.y+dy*500}}finishOp();return;
+    }
+
+    if(activeOp==='fillet'){
+      if(opStep===1){opData.idx2=selectAt(p,false);if(opData.idx2>=0&&opData.idx2!==opData.idx){commit();/* visual approximation: keep both lines and add arc */ const a=objects[opData.idx],b=objects[opData.idx2]; if(a&&b&&a.a&&a.b&&b.a&&b.b){objects.push({type:'arc',a:a.b,b:b.a,r:Math.min(d(a.a,a.b),d(b.a,b.b))/4,layer:currentLayer});} }finishOp();return}
+    }
+  }
+
+  function opMove(e){
+    const p=fixWorld(e);
+    last=p;
+    if(activeOp && opStep>0){
+      if(activeOp==='circle'&&start) temp={type:'circle',a:start,r:d(start,p)};
+      else if(start && ['line','wall','door','window','beam','stair','dimension','leader'].includes(activeOp)) temp={type:activeOp,a:start,b:p,width:activeOp==='wall'?+document.getElementById('wallThick').value:2};
+      else if(start && ['rectangle','room','slab','polygon'].includes(activeOp)) temp={type:activeOp==='polygon'?'rectangle':activeOp,a:start,b:p};
+    }
+    showCursor(e);draw();
+  }
+
+  C.addEventListener('mousemove',e=>{e.stopImmediatePropagation();opMove(e)},true);
+  C.addEventListener('mousedown',e=>{
+    e.stopImmediatePropagation();
+    C.focus();
+    if(e.button===1||e.shiftKey){panning=true;panLast={x:e.clientX,y:e.clientY};return}
+    opClick(e);
+  },true);
+  C.addEventListener('mouseup',e=>{e.stopImmediatePropagation();if(e.button===1||e.shiftKey)panning=false},true);
+
+  /* pan is kept from V3 but made capture-safe */
+  window.addEventListener('mousemove',e=>{
+    if(!panning)return;
+    ox+=e.clientX-panLast.x;oy+=e.clientY-panLast.y;panLast={x:e.clientX,y:e.clientY};draw();
+  },true);
+  window.addEventListener('mouseup',()=>{panning=false},true);
+
+  /* command line */
+  const cmd=document.getElementById('cmd');
+  function runTextCommand(v){v=v.trim();if(!v)return beginCommand(lastCommand||'line');const n=alias[v.toLowerCase()]||v.toLowerCase();beginCommand(n)}
+  cmd.addEventListener('keydown',e=>{
+    e.stopImmediatePropagation();
+    if(e.key==='Enter'){e.preventDefault();runTextCommand(cmd.value);cmd.value=''}
+    else if(e.key==='Escape'){cmd.value='';finishOp()}
+  },true);
+
+  /* F2 command palette — V3 had the UI but no reliable runner */
+  const palette=document.getElementById('cmdPalette'),cpInput=document.getElementById('cpInput'),cpList=document.getElementById('cpList');
+  function fillPalette(q=''){
+    cpList.innerHTML='';
+    const qq=q.toLowerCase();
+    commandList.filter(x=>(x[0]+' '+x[1]+' '+x[2]).toLowerCase().includes(qq)).forEach((x,i)=>{
+      const row=document.createElement('div');row.className='cpitem'+(i===0?' sel':'');
+      row.innerHTML='<span>'+x[0]+' <small>['+x[1]+']</small></span><small>'+x[2]+'</small>';
+      row.onclick=()=>{palette.style.display='none';runTextCommand(x[0])};
+      cpList.appendChild(row);
+    });
+  }
+  function openPalette(){palette.style.display='block';fillPalette();cpInput.value='';setTimeout(()=>cpInput.focus(),0)}
+  document.addEventListener('keydown',e=>{
+    if(e.key==='F2'){e.preventDefault();openPalette();return}
+    if(e.key==='F3'){e.preventDefault();fixSnap=!fixSnap;setToggleUI();return}
+    if(e.key==='F7'){e.preventDefault();fixGrid=!fixGrid;setToggleUI();return}
+    if(e.key==='F8'){e.preventDefault();fixOrtho=!fixOrtho;setToggleUI();return}
+    if(e.key==='Escape'){if(palette.style.display==='block'){palette.style.display='none';return}finishOp();return}
+  },true);
+  cpInput.addEventListener('input',()=>fillPalette(cpInput.value));
+  cpInput.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){
+      const first=cpList.querySelector('.cpitem');
+      if(first){palette.style.display='none';runTextCommand(first.querySelector('span').textContent.split(' ')[0])}
+    }
+    if(e.key==='Escape')palette.style.display='none';
+  });
+
+  /* dynamic input — type @5000<0, @4000,0, 5000,5000 while a command is active */
+  document.addEventListener('keydown',e=>{
+    if(e.target===cmd||e.target===cpInput||e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;
+    if(e.key==='F2'||e.key==='F3'||e.key==='F7'||e.key==='F8'||e.key==='Escape')return;
+    if(e.key.length===1){
+      if(!window.__dynInput){window.__dynInput='';}
+      if(e.key==='@'||/[0-9.,<+\-]/.test(e.key)){window.__dynInput+=e.key;}
+    }
+    if(e.key==='Enter' && window.__dynInput){
+      const v=parseInput(window.__dynInput);window.__dynInput='';
+      const p=pointFromParsed(v);
+      if(p){
+        /* synthetic CAD point */
+        const r=C.getBoundingClientRect();
+        opClick({clientX:r.left+p.x*scale+ox,clientY:r.top+p.y*scale+oy,button:0,ctrlKey:false,metaKey:false});
+      }
+    }
+  },true);
+
+  /* use a true CAD-style crosshair over the whole drawing */
+  C.addEventListener('mouseleave',()=>{cursor.style.display='none';snapMark.style.display='none'},true);
+  C.addEventListener('mouseenter',e=>showCursor(e),true);
+
+  /* improve drawing for arcs + hatch without disturbing V3 objects */
+  const oldDrawObj=window.drawObj;
+  window.drawObj=function(o,i){
+    if(o.type==='arc'){
+      const A=S(o.a),B=S(o.b),r=o.r*scale;
+      ctx.save();ctx.strokeStyle=i===selected?'#d17a00':(o.layer==='Structural'?'#8b3a2b':'#263238');ctx.lineWidth=2;
+      const a1=Math.atan2(A.y-B.y,A.x-B.x),a2=a1+Math.PI*1.2;
+      ctx.beginPath();ctx.arc(A.x,A.y,r,a1,a2);ctx.stroke();ctx.restore();return;
+    }
+    oldDrawObj(o,i);
+    if(o.hatch && o.a&&o.b){
+      const A=S(o.a),B=S(o.b),x=Math.min(A.x,B.x),y=Math.min(A.y,B.y),w=Math.abs(B.x-A.x),h=Math.abs(B.y-A.y);
+      ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();ctx.strokeStyle='#9aa5a9';ctx.lineWidth=1;
+      for(let k=-h;k<w+h;k+=10){ctx.beginPath();ctx.moveTo(x+k,y);ctx.lineTo(x+k+h,y+h);ctx.stroke()}
+      ctx.restore();
+    }
+  };
+
+  /* initial state */
+  setToggleUI();
+  prompt('READY — Choose a command or click an icon.');
+  draw();
+})();
+</script>
+
 </body>
 </html>
