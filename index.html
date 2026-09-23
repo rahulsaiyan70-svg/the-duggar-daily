@@ -1,301 +1,185 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Duggar Daily | Jammu & Kashmir</title>
-<meta name="description" content="The Duggar Daily — independently written news from Jammu & Kashmir.">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RMA CAD V1</title>
 <style>
-:root{
-  --ink:#111827; --muted:#667085; --red:#b91c1c; --dark:#101828;
-  --paper:#fff; --soft:#f5f7fa; --line:#e5e7eb; --gold:#c69214;
-}
-*{box-sizing:border-box} body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f2f4f7;color:var(--ink)}
-button,input{font:inherit}.wrap{max-width:1220px;margin:auto;padding:0 18px}
-.top{background:var(--dark);color:#fff;font-size:13px}.top .wrap{display:flex;justify-content:space-between;gap:15px;padding:9px 18px}
-.brandbar{background:#fff;border-bottom:1px solid var(--line)}.brandbar .wrap{display:flex;align-items:center;justify-content:space-between;padding:18px}
-.brand{display:flex;align-items:center;gap:12px}.mark{width:48px;height:48px;background:var(--red);color:#fff;border-radius:7px;display:grid;place-items:center;font-weight:900;font-size:22px}
-.brand h1{margin:0;font-family:Georgia,serif;font-size:32px;letter-spacing:-1px}.brand small{color:var(--muted)}
-.search{display:flex;gap:7px}.search input{width:220px;padding:10px 12px;border:1px solid #d0d5dd;border-radius:6px}.btn{border:0;border-radius:6px;padding:10px 14px;background:var(--red);color:#fff;font-weight:700;cursor:pointer}
-nav{background:#151b26;color:#fff;position:sticky;top:0;z-index:20;box-shadow:0 2px 8px #0002}nav .wrap{display:flex;overflow:auto}nav button{background:none;border:0;color:#fff;padding:13px 15px;white-space:nowrap;cursor:pointer;font-weight:700}nav button:hover,nav button.active{background:var(--red)}
-.breaking{background:#fff;border-bottom:1px solid var(--line)}.breaking .wrap{display:flex;align-items:center;gap:12px;padding:10px 18px}.tag{background:var(--red);color:#fff;font-size:12px;font-weight:900;padding:5px 8px;border-radius:3px}.ticker{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-main{padding:24px 0}.hero{display:grid;grid-template-columns:1.7fr 1fr;gap:20px}.card,.section,.article{background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;box-shadow:0 2px 8px #10182808}
-.heroimg{height:330px;background:linear-gradient(135deg,#253858,#8f1d1d);display:grid;place-items:end start;padding:22px;color:#fff;position:relative}
-.heroimg:after{content:"JAMMU & KASHMIR";position:absolute;inset:auto 22px 22px auto;border:1px solid #fff8;padding:6px 9px;border-radius:4px;font-size:11px}
-.hero h2{font:700 38px Georgia,serif;margin:0;max-width:850px;text-shadow:0 2px 5px #0008}.hero-copy{padding:18px}.kicker{color:var(--red);font-weight:800;text-transform:uppercase;font-size:12px;letter-spacing:.5px}.meta{font-size:12px;color:var(--muted);margin:8px 0 0}
-.side{display:flex;flex-direction:column}.side h3,.section h3{margin:0;padding:15px 17px;border-bottom:1px solid var(--line);font:700 20px Georgia,serif}.side-item{padding:14px 16px;border-bottom:1px solid var(--line);cursor:pointer}.side-item:last-child{border:0}.side-item b{display:block;font:700 17px Georgia,serif;line-height:1.3}.side-item span{font-size:12px;color:var(--muted)}
-.grid{display:grid;grid-template-columns:2fr 1fr;gap:20px;margin-top:22px}.section{margin-bottom:20px}.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:0}.news-card{padding:18px;border-bottom:1px solid var(--line);cursor:pointer;transition:.18s}.news-card:hover{background:#fafafa;transform:translateY(-1px)}.news-card h4{margin:6px 0 8px;font:700 21px Georgia,serif;line-height:1.25}.news-card p{margin:0;color:#4b5563;line-height:1.55;font-size:14px}.photo{height:150px;background:linear-gradient(135deg,#d7dee8,#8e9aaa);display:grid;place-items:center;color:#344054;font-weight:800;margin-bottom:12px}.photo:before{content:"PHOTO / LICENSED / OFFICIAL";font-size:11px;border:1px dashed #667085;padding:7px}
-.list .news-card{padding:15px}.list .news-card h4{font-size:18px}
-.ad{margin:20px 0;background:#eef1f5;border:1px dashed #b8c0cc;color:#667085;min-height:85px;display:grid;place-items:center;font-size:12px;letter-spacing:1px}
-.tags{display:flex;flex-wrap:wrap;gap:8px;padding:15px}.tags button{border:1px solid #d0d5dd;background:#fff;border-radius:20px;padding:8px 11px;cursor:pointer}.tags button:hover{border-color:var(--red);color:var(--red)}
-footer{background:#101828;color:#cbd5e1;margin-top:30px}.footergrid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:30px;padding:35px 18px}.footergrid h3{color:#fff;font-family:Georgia,serif}.footergrid p{line-height:1.6;font-size:14px}.copyright{border-top:1px solid #344054;padding:14px 18px;font-size:12px;color:#98a2b3}
-.article-page{display:none}.article{padding:25px}.article h1{font:700 44px Georgia,serif;line-height:1.08;margin:8px 0 12px}.article .lead{font-size:19px;color:#475467;line-height:1.6;border-left:4px solid var(--red);padding-left:14px}.article-photo{height:350px;background:linear-gradient(135deg,#cbd5e1,#667085);display:grid;place-items:center;margin:20px 0;color:#fff;font-weight:800}.article-photo span{background:#111827bb;padding:9px 12px;border-radius:5px}.article-body{max-width:850px;font:18px/1.8 Georgia,serif}.article-body p{margin:0 0 18px}.sourcebox{font:14px/1.5 Arial;background:#f8fafc;border:1px solid var(--line);padding:14px;border-radius:8px;color:#475467}
-.back{margin-bottom:15px;background:#fff;color:var(--ink);border:1px solid #d0d5dd}.hidden{display:none!important}
-.empty{padding:30px;text-align:center;color:var(--muted)}
-
-.rma-ad{
-  cursor:pointer;
-  min-height:105px;
-  padding:0;
-  border:0;
-  background:linear-gradient(135deg,#111827,#2b3445);
-  color:#fff;
-  overflow:hidden;
-  position:relative;
-}
-.rma-large{min-height:125px}
-.rma-ad:before{
-  content:"";
-  position:absolute;left:0;top:0;bottom:0;width:6px;background:#b91c1c;
-}
-.rma-inner{
-  min-height:inherit;
-  display:flex;
-  align-items:center;
-  gap:18px;
-  padding:18px 22px;
-  text-align:left;
-}
-.rma-badge{
-  width:58px;height:58px;flex:0 0 58px;
-  border-radius:8px;background:#b91c1c;color:#fff;
-  display:grid;place-items:center;
-  font-size:20px;font-weight:900;
-  box-shadow:0 4px 12px #0004;
-}
-.rma-inner strong{
-  display:block;font:800 18px Arial,sans-serif;
-  letter-spacing:.3px;color:#fff;
-}
-.rma-large .rma-inner strong{font-size:21px}
-.rma-inner span{
-  display:block;margin-top:4px;
-  font-weight:700;color:#e5e7eb;font-size:13px;
-}
-.rma-inner small{
-  display:block;margin-top:5px;color:#cbd5e1;font-size:12px;
-}
-.rma-btn{
-  margin-left:auto;white-space:nowrap;
-  border:1px solid #fff8;background:#fff;color:#111827;
-  border-radius:5px;padding:9px 12px;font-size:11px;font-weight:900;
-  cursor:pointer;
-}
-.rma-ad:hover{box-shadow:0 8px 24px #0002;transform:translateY(-1px);transition:.18s}
-
-@media(max-width:850px){
- .brandbar .wrap{align-items:flex-start;gap:12px;flex-direction:column}.search{width:100%}.search input{flex:1;width:auto}
- .hero,.grid{grid-template-columns:1fr}.cards{grid-template-columns:1fr}.heroimg{height:270px}.hero h2{font-size:29px}.footergrid{grid-template-columns:1fr}.article h1{font-size:34px}.article-photo{height:240px}.rma-inner{gap:10px;padding:14px}.rma-btn{padding:8px 9px}.rma-inner strong{font-size:14px}.rma-inner span{font-size:11px}.rma-inner small{font-size:10px}
-}
+:root{--bg:#f4f6f7;--panel:#fff;--line:#d8dee3;--text:#172126;--accent:#2f7d5a;--canvas:#fff}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+header{height:52px;background:#19352b;color:#fff;display:flex;align-items:center;padding:0 14px;gap:18px}
+.logo{font-weight:700;font-size:18px;white-space:nowrap}.menu{display:flex;gap:6px}.menu button{background:transparent;border:0;color:#fff;padding:8px 10px;cursor:pointer;border-radius:5px}.menu button:hover{background:#285444}
+.app{height:calc(100vh - 52px);display:flex}
+.left{width:64px;background:#fff;border-right:1px solid var(--line);padding:7px 5px;display:flex;flex-direction:column;gap:5px}
+.tool{height:43px;border:1px solid transparent;background:#fff;border-radius:6px;cursor:pointer;font-size:11px}.tool:hover,.tool.active{background:#e8f3ee;border-color:#9ac7b2;color:#18583e}
+.tool b{display:block;font-size:16px;margin-bottom:2px}.workspace{position:relative;flex:1;background:#ddd;overflow:hidden}
+canvas{position:absolute;inset:0;width:100%;height:100%;background:var(--canvas);cursor:crosshair}
+.right{width:250px;background:#fff;border-left:1px solid var(--line);padding:12px;overflow:auto}
+h3{margin:4px 0 10px;font-size:14px}.group{border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:12px}
+label{display:block;font-size:12px;margin:7px 0 3px}input,select{width:100%;padding:7px;border:1px solid #cbd3d8;border-radius:5px}
+.row{display:flex;gap:6px}.row>*{flex:1}
+button.action{width:100%;padding:8px;border:1px solid #bfc8cd;border-radius:5px;background:#fff;cursor:pointer}.action:hover{background:#f0f3f4}
+.status{position:absolute;left:10px;bottom:10px;background:rgba(255,255,255,.9);border:1px solid #cfd6da;padding:6px 9px;border-radius:5px;font:12px monospace;pointer-events:none}
+#layerList div{padding:5px;border-radius:4px;font-size:12px}.current{background:#e8f3ee;font-weight:600}
+footer{position:fixed;left:64px;right:250px;bottom:0;height:27px;background:#19352b;color:#fff;display:flex;align-items:center;padding:0 10px;font-size:11px;gap:18px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center}.modal .box{background:#fff;padding:20px;border-radius:8px;width:340px}.modal h2{margin-top:0}
 </style>
 </head>
 <body>
-<div class="top"><div class="wrap"><span>Tuesday, 22 September 2026</span><span>Jammu & Kashmir | Independent Digital News</span></div></div>
+<header>
+<div class="logo">RMA CAD V1</div>
+<div class="menu">
+<button onclick="newDrawing()">File ▾</button>
+<button onclick="undo()">Edit ▾</button>
+<button onclick="fitView()">View ▾</button>
+</div>
+<div style="margin-left:auto;font-size:12px;opacity:.9">Browser CAD • RMA Design & Construction</div>
+</header>
 
-<header class="brandbar"><div class="wrap">
-  <div class="brand"><div class="mark">DD</div><div><h1>The Duggar Daily</h1><small>Jammu & Kashmir • News • People • Development</small></div></div>
-  <div class="search"><input id="search" placeholder="Search news..." onkeydown="if(event.key==='Enter') searchNews()"><button class="btn" onclick="searchNews()">Search</button></div>
-</div></header>
+<div class="app">
+<aside class="left">
+<button class="tool active" data-tool="select" onclick="setTool('select')"><b>↖</b>Select</button>
+<button class="tool" data-tool="line" onclick="setTool('line')"><b>╱</b>Line</button>
+<button class="tool" data-tool="polyline" onclick="setTool('polyline')"><b>⌁</b>Polyline</button>
+<button class="tool" data-tool="rectangle" onclick="setTool('rectangle')"><b>□</b>Rect</button>
+<button class="tool" data-tool="circle" onclick="setTool('circle')"><b>○</b>Circle</button>
+<button class="tool" data-tool="wall" onclick="setTool('wall')"><b>▣</b>Wall</button>
+<button class="tool" data-tool="column" onclick="setTool('column')"><b>■</b>Column</button>
+<button class="tool" data-tool="beam" onclick="setTool('beam')"><b>━</b>Beam</button>
+<button class="tool" data-tool="dimension" onclick="setTool('dimension')"><b>↔</b>Dim</button>
+<button class="tool" data-tool="erase" onclick="setTool('erase')"><b>⌫</b>Erase</button>
+</aside>
 
-<nav><div class="wrap">
-<button class="active" onclick="filterNews('All',this)">Home</button><button onclick="filterNews('Jammu',this)">Jammu</button><button onclick="filterNews('Kashmir',this)">Kashmir</button><button onclick="filterNews('Politics',this)">Politics</button><button onclick="filterNews('Jobs',this)">Jobs</button><button onclick="filterNews('Business',this)">Business</button><button onclick="filterNews('Sports',this)">Sports</button><button onclick="filterNews('Environment',this)">Environment</button><button onclick="filterNews('Security',this)">Security</button><button onclick="filterNews('Weather',this)">Weather</button></div></nav>
+<main class="workspace" id="workspace">
+<canvas id="cad"></canvas>
+<div class="status" id="status">X: 0.00  Y: 0.00 | Grid: ON | Snap: ON</div>
+</main>
 
-<div class="breaking"><div class="wrap"><span class="tag">BREAKING</span><div class="ticker">J&K Assembly session opens amid protests • 40,672 government posts reported vacant • ₹3.22 crore Rajouri relief distributed • Achan waste-remediation plan announced</div></div></div>
-
-<main class="wrap" id="home">
-<section class="hero">
- <div class="card" onclick="openArticle(1)" style="cursor:pointer">
-  <div class="heroimg"><div><div class="kicker" style="color:#fff">J&K POLITICS</div><h2>J&K Assembly Session Sees Protests Over Power Tariff, Workers' Issues and Statehood</h2><div class="meta" style="color:#eee">Srinagar • 22 September 2026</div></div></div>
-  <div class="hero-copy"><p>The autumn Assembly session began with heated exchanges over electricity tariffs, worker issues and the demand for restoration of statehood.</p></div>
- </div>
- <div class="card side"><h3>Top Stories</h3>
-   <div class="side-item" onclick="openArticle(2)"><span>JOBS & GOVERNMENT</span><b>More Than 40,000 Government Posts Vacant Across J&K Departments</b></div>
-   <div class="side-item" onclick="openArticle(3)"><span>RAJOURI</span><b>₹3.22 Crore Relief Distributed to Flood-Affected Families</b></div>
-   <div class="side-item" onclick="openArticle(4)"><span>POONCH</span><b>Three Rusted Landmines Found in Mendhar, Safely Destroyed</b></div>
-   <div class="side-item" onclick="openArticle(5)"><span>SRINAGAR</span><b>Achan Waste Site Set for Major Remediation</b></div>
- </div>
-</section>
-
-<div class="ad rma-ad rma-large" onclick="window.open('https://www.google.com/search?q=RMA+Design+and+Construction+Jammu','_blank')">
-  <div class="rma-inner">
-    <div class="rma-badge">RMA</div>
-    <div>
-      <strong>BUILD WITH CONFIDENCE</strong>
-      <span>RMA DESIGN & CONSTRUCTION</span>
-      <small>Structural Design • Architectural Planning • Municipality Drawings • Construction</small>
-    </div>
-    <button type="button" class="rma-btn">BOOK A CONSULTATION</button>
-  </div>
+<aside class="right">
+<div class="group">
+<h3>Drawing</h3>
+<div class="row"><button class="action" onclick="undo()">↶ Undo</button><button class="action" onclick="redo()">↷ Redo</button></div>
+<div style="height:6px"></div>
+<div class="row"><button class="action" onclick="saveDrawing()">Save</button><button class="action" onclick="loadDrawing()">Load</button></div>
+<div style="height:6px"></div>
+<button class="action" onclick="exportSVG()">Export SVG</button>
+<div style="height:6px"></div>
+<button class="action" onclick="window.print()">Print / PDF</button>
 </div>
 
-<section class="grid">
-<div>
- <section class="section"><h3>Latest News</h3><div class="cards" id="latest"></div></section>
- <section class="section"><h3>Jammu & Kashmir — Complete Coverage</h3><div class="cards" id="coverage"></div></section>
+<div class="group">
+<h3>View</h3>
+<div class="row"><button class="action" onclick="zoom(1.2)">＋ Zoom</button><button class="action" onclick="zoom(.83)">－ Zoom</button></div>
+<div style="height:6px"></div>
+<button class="action" onclick="fitView()">Fit Drawing</button>
 </div>
-<aside>
- <section class="section list"><h3>Most Read</h3><div id="mostread"></div></section>
- <section class="section"><h3>Browse Sections</h3><div class="tags">
-  <button onclick="filterNews('Jammu')">Jammu</button><button onclick="filterNews('Kashmir')">Kashmir</button><button onclick="filterNews('Jobs')">Jobs</button><button onclick="filterNews('Business')">Business</button><button onclick="filterNews('Sports')">Sports</button><button onclick="filterNews('Environment')">Environment</button><button onclick="filterNews('Security')">Security</button>
- </div></section>
- <div class="ad rma-ad" onclick="window.open('https://www.google.com/search?q=RMA+Design+and+Construction+Jammu','_blank')">
-  <div class="rma-inner">
-    <div class="rma-badge">RMA</div>
-    <div>
-      <strong>RMA DESIGN & CONSTRUCTION</strong>
-      <span>Engineering • Architecture • Planning • Construction</span>
-      <small>Professional design & construction services in Jammu & Kashmir</small>
-    </div>
-    <button type="button" class="rma-btn">CONTACT US</button>
-  </div>
+
+<div class="group">
+<h3>Settings</h3>
+<label>Grid size</label><input id="grid" type="number" value="100" min="5" step="5" onchange="draw()">
+<label>Wall thickness</label><input id="wallThick" type="number" value="230" min="50" step="10">
+<label>Column width</label><input id="colSize" type="number" value="300" min="100" step="10">
+<label>Layer</label>
+<select id="layer" onchange="currentLayer=this.value;draw()">
+<option>Architectural</option><option>Structural</option><option>Dimensions</option><option>Furniture</option>
+</select>
+<label><input id="snap" type="checkbox" checked onchange="draw()" style="width:auto"> Snap to grid</label>
+<label><input id="gridOn" type="checkbox" checked onchange="draw()" style="width:auto"> Show grid</label>
+</div>
+
+<div class="group">
+<h3>Layers</h3>
+<div id="layerList">
+<div class="current">● Architectural</div><div>● Structural</div><div>● Dimensions</div><div>● Furniture</div>
+</div>
+</div>
+
+<div class="group">
+<h3>Quick info</h3>
+<div style="font-size:12px;line-height:1.5">Click two points to draw. Mouse wheel zooms. Middle mouse or Shift+drag pans. Press Esc to cancel a command.</div>
 </div>
 </aside>
-</section>
-</main>
-
-<main class="wrap article-page" id="articlePage">
-<button class="btn back" onclick="goHome()">← Back to all news</button>
-<article class="article" id="article"></article>
-</main>
-
-<footer><div class="wrap footergrid">
-<div><h3>The Duggar Daily</h3><p>An independent Jammu & Kashmir digital news concept. Articles are intended to be independently written from verified developments, with clear distinction between reported facts, official statements and allegations.</p></div>
-<div><h3>Sections</h3><p>Jammu<br>Kashmir<br>Politics<br>Jobs<br>Business<br>Sports<br>Security</p></div>
-<div><h3>Editorial</h3><p>Contact the newsroom<br>Corrections<br>Privacy<br>Terms<br>Photo & Copyright Policy</p></div>
-</div><div class="wrap copyright">© 2026 The Duggar Daily. Prototype newsroom website.</div></footer>
+</div>
+<footer><span id="toolStatus">Command: SELECT</span><span>Units: mm</span><span>Zoom: <span id="zoomText">100%</span></span><span>RMA CAD V1</span></footer>
 
 <script>
-const news = [
-{id:1,cat:"Politics",area:"Kashmir",title:"J&K Assembly Session Sees Protests Over Power Tariff, Workers' Issues and Statehood",place:"Srinagar",date:"22 September 2026",
-lead:"The autumn session of the Jammu and Kashmir Legislative Assembly began amid heated exchanges over electricity tariffs, employment, worker regularisation and the demand for restoration of statehood.",
-body:[
-"The autumn session of the Jammu and Kashmir Legislative Assembly began amid heated exchanges between members, with electricity tariffs, employment, regularisation of contractual workers and restoration of statehood among the issues raised during the opening proceedings.",
-"During the proceedings, BJP legislators raised concerns about the recent electricity tariff increase and the position of several categories of workers, including daily wagers and workers associated with health and social-sector programmes.",
-"Members also raised the issue of restoring statehood to Jammu and Kashmir. The exchanges disrupted proceedings as members moved into the Well of the House and the Speaker appealed to legislators to return to their seats.",
-"The session is expected to consider a range of matters concerning administration, recruitment, employment, infrastructure and public services during its scheduled sittings.",
-"Source note: This article is an independently written report based on publicly reported Assembly developments. Statements and political positions are attributed rather than presented as editorial conclusions."
-]},
-{id:2,cat:"Jobs",area:"Kashmir",title:"More Than 40,000 Government Posts Vacant Across J&K Departments",place:"Srinagar",date:"22 September 2026",
-lead:"The Jammu and Kashmir Government has informed the Legislative Assembly that 40,672 posts under the direct recruitment quota are vacant across departments.",
-body:[
-"The government has placed before the Legislative Assembly a department-wise picture of vacancies, showing 40,672 vacant positions under the direct recruitment quota.",
-"The reported vacancies comprise 3,318 gazetted posts, 24,427 non-gazetted posts and 12,927 Multi-Tasking Staff positions.",
-"Health and Medical Education accounts for the largest share of the vacancies, with 12,797 positions reported vacant. Agriculture-related departments and several other major administrative departments also have substantial vacancies.",
-"The government has said departments are required to identify vacancies and refer them to the appropriate recruiting agencies. Recruitment planning and coordination with the agencies are intended to improve the process of filling posts.",
-"For job seekers, the figures provide an indication of the scale of vacancies across the government establishment, although an individual vacancy becomes an opportunity for applicants only after the relevant recruitment agency issues a notification."
-]},
-{id:3,cat:"Jammu",area:"Jammu",title:"₹3.22 Crore Relief Distributed to Families Affected by Rajouri Floods",place:"Rajouri",date:"22 September 2026",
-lead:"More than ₹3.22 crore has been distributed among families affected by flash floods and landslides in Rajouri, according to information placed before the Assembly.",
-body:[
-"The Jammu and Kashmir Government has reported that more than ₹3.22 crore has been distributed to families affected by flash floods and landslides in Rajouri constituency.",
-"The assistance includes relief released under SDRF norms as well as support from the Chief Minister's Relief Fund. The administration has also assessed damage to roads, bridges, electricity infrastructure, water systems and agricultural land.",
-"A proposal estimated at around ₹185 crore has been prepared for permanent restoration of 403 damaged roads and bridges in the district.",
-"Power infrastructure also suffered damage, while temporary arrangements were made to restore essential services. Permanent restoration is being processed through the relevant departments.",
-"Agricultural losses were reported in maize and paddy-growing areas, with the extent of damage assessed separately by the administration."
-]},
-{id:4,cat:"Security",area:"Jammu",title:"Three Rusted Landmines Found in Mendhar, Safely Destroyed",place:"Poonch",date:"22 September 2026",
-lead:"Three old and rusted landmines were recovered in the Mendhar area of Poonch district and subsequently destroyed by a bomb disposal team.",
-body:[
-"Three rusted landmines were found in the Phagwari Gali area near Dharana Basoni in Mendhar while work was being carried out in the area.",
-"Army personnel detected the explosive devices and a bomb disposal team was called to the location.",
-"The mines were destroyed in a controlled operation and officials reported no injury or property damage in the disposal process.",
-"The recovery is a reminder that old explosive material can remain in parts of the border belt. People encountering suspicious objects should avoid touching or moving them and immediately inform the police or security agencies."
-]},
-{id:5,cat:"Environment",area:"Kashmir",title:"Achan Waste Site in Srinagar Set for Major Remediation Under New Plan",place:"Srinagar",date:"22 September 2026",
-lead:"Authorities are planning a major intervention to process the large quantity of legacy waste accumulated at the Achan site in Srinagar.",
-body:[
-"The Achan waste site in Srinagar is set to undergo a major remediation effort aimed at addressing the accumulated municipal waste at the facility.",
-"The proposed approach includes processing legacy waste through a waste-to-energy system. A separate compressed-biogas facility is also being planned to deal with future municipal waste.",
-"The accumulated waste reflects years of urban waste generation and has become a significant waste-management and environmental challenge for Srinagar.",
-"The project is intended not only to reduce the existing waste burden but also to move toward a more structured system for processing newly generated municipal waste.",
-"The effectiveness of the programme will depend on implementation, waste segregation, processing capacity and sustained operation of the proposed facilities."
-]},
-{id:6,cat:"Jammu",area:"Jammu",title:"Six New Tunnels in J&K Highway Projects May Be Completed by Next Year",place:"Jammu & Kashmir",date:"22 September 2026",
-lead:"Six tunnels under highway infrastructure projects in Jammu and Kashmir are expected to be completed by next year, according to the National Highways Authority of India.",
-body:[
-"Six tunnels being constructed under highway projects in Jammu and Kashmir are expected to reach completion by next year, according to information attributed to the National Highways Authority of India.",
-"Tunnel infrastructure is particularly significant in the Union Territory because major road corridors pass through steep and difficult terrain where gradients, landslides, snowfall and weather conditions can affect connectivity.",
-"Additional tunnels can reduce the need for difficult road alignments and may improve the reliability of movement on the corridors where they are built.",
-"The tunnels will still require completion of construction, safety systems and other statutory and operational requirements before being opened to traffic."
-]},
-{id:7,cat:"Business",area:"Jammu",title:"Jammu Expo 2026 Concludes After Showcasing Local Products and Enterprises",place:"Jammu",date:"22 September 2026",
-lead:"The first Jammu Expo 2026 concluded at Gole Market, Gandhi Nagar, bringing together local entrepreneurs, artisans, MSMEs, startups and producers.",
-body:[
-"The first Jammu Expo 2026 concluded after a three-day programme showcasing products and enterprises from the Jammu region.",
-"Participating businesses and producers displayed handicrafts, handloom products, agriculture and horticulture goods, food products and other locally produced items.",
-"The expo gave small businesses and traditional producers an opportunity to present their products directly to visitors and build visibility.",
-"Such events can provide local enterprises with opportunities to meet consumers, test market interest and connect with other businesses and institutions.",
-"Organisers described the public response as encouraging as the event closed."
-]},
-{id:8,cat:"Jammu",area:"Jammu",title:"LG Calls for Greater Use of Millets in Agriculture and Diet",place:"Jammu",date:"22 September 2026",
-lead:"A J&K event on millet-based agriculture and food systems highlighted the crop's potential role in agricultural diversification and healthier diets.",
-body:[
-"Lieutenant Governor Manoj Sinha called for greater promotion of millets in farming and food consumption during an event focused on millet-based agriculture and food systems.",
-"Millets have traditionally been cultivated in India and are being promoted in several programmes as crops that can contribute to agricultural diversification.",
-"The discussion also highlighted the connection between agricultural production, food choices and market opportunities for farmers.",
-"Researchers, agriculture stakeholders and other participants discussed the potential for strengthening millet cultivation and value chains in Jammu and Kashmir."
-]},
-{id:9,cat:"Kashmir",area:"Kashmir",title:"Government Suspends Kashmir Agrostologist Pending Inquiry",place:"Srinagar",date:"22 September 2026",
-lead:"The Jammu and Kashmir Government has placed the Agrostologist Kashmir under suspension pending an inquiry into the officer's conduct.",
-body:[
-"The government has issued an order placing Agrostologist Kashmir Sajad Ahmad Khan under suspension while an inquiry is conducted.",
-"The order places the officer under the applicable service rules during the suspension period.",
-"The suspension is an administrative step pending examination of the matter. It does not by itself establish the final findings of the inquiry.",
-"Any further action will depend on the outcome of the departmental process and the competent authority's decision."
-]},
-{id:10,cat:"Sports",area:"Jammu",title:"J&K Begins Preparations for 2027 National Master Games",place:"Jammu & Kashmir",date:"22 September 2026",
-lead:"Preparations have begun for the 9th National Master Games, scheduled to be held in Jammu and Kashmir in March 2027.",
-body:[
-"Jammu and Kashmir has begun preparations to host the 9th National Master Games from March 13 to 16, 2027.",
-"The event is expected to bring athletes from multiple states and will cover a range of sporting disciplines.",
-"Organisers and authorities are assessing venues and infrastructure as part of preparations for the competition.",
-"The event is expected to provide a platform for veteran athletes while also bringing sporting activity and visitors to the region."
-]}
-];
+const canvas=document.getElementById('cad'), ctx=canvas.getContext('2d'), workspace=document.getElementById('workspace');
+let W,H, scale=1, ox=80, oy=80, tool='select', currentLayer='Architectural';
+let objects=[], selected=-1, start=null, temp=null, history=[], future=[], panning=false, panLast=null;
 
-function card(n){
- return `<div class="news-card" onclick="openArticle(${n.id})">
- <div class="photo"></div><div class="kicker">${n.cat} • ${n.area}</div>
- <h4>${n.title}</h4><p>${n.lead}</p><div class="meta">${n.place} • ${n.date}</div>
- </div>`;
+function resize(){const r=workspace.getBoundingClientRect(),d=devicePixelRatio||1;W=r.width;H=r.height;canvas.width=W*d;canvas.height=H*d;canvas.style.width=W+'px';canvas.style.height=H+'px';ctx.setTransform(d,0,0,d,0,0);draw()}
+window.addEventListener('resize',resize); resize();
+
+function world(e){const r=canvas.getBoundingClientRect();let x=(e.clientX-r.left-ox)/scale,y=(e.clientY-r.top-oy)/scale;
+ if(document.getElementById('snap').checked){let g=+document.getElementById('grid').value||100;x=Math.round(x/g)*g;y=Math.round(y/g)*g}return{x,y}}
+function screen(p){return{x:p.x*scale+ox,y:p.y*scale+oy}}
+function setTool(t){tool=t;selected=-1;start=null;temp=null;document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active',b.dataset.tool===t));document.getElementById('toolStatus').textContent='Command: '+t.toUpperCase();draw()}
+function pushHistory(){history.push(JSON.stringify(objects));if(history.length>60)history.shift();future=[]}
+function undo(){if(!history.length)return;future.push(JSON.stringify(objects));objects=JSON.parse(history.pop());selected=-1;draw()}
+function redo(){if(!future.length)return;history.push(JSON.stringify(objects));objects=JSON.parse(future.pop());draw()}
+function add(o){pushHistory();objects.push({...o,layer:currentLayer});draw()}
+function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
+function drawGrid(){
+ if(!document.getElementById('gridOn').checked)return;
+ const g=+document.getElementById('grid').value||100, step=g*scale;ctx.save();ctx.strokeStyle='#edf0f1';ctx.lineWidth=1;
+ let x0=((ox%step)+step)%step,y0=((oy%step)+step)%step;
+ for(let x=x0;x<W;x+=step){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}
+ for(let y=y0;y<H;y+=step){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+ ctx.strokeStyle='#d8dde0';ctx.beginPath();ctx.moveTo(ox,0);ctx.lineTo(ox,H);ctx.moveTo(0,oy);ctx.lineTo(W,oy);ctx.stroke();ctx.restore()
 }
-function render(){
- document.getElementById('latest').innerHTML=news.slice(0,6).map(card).join('');
- document.getElementById('coverage').innerHTML=news.slice(6).map(card).join('');
- document.getElementById('mostread').innerHTML=news.slice(0,5).map(n=>`<div class="news-card" onclick="openArticle(${n.id})"><div class="kicker">${n.cat}</div><h4>${n.title}</h4></div>`).join('');
+function line(a,b,width=2,dash=false){let A=screen(a),B=screen(b);ctx.save();ctx.lineWidth=width;ctx.setLineDash(dash?[7,5]:[]);ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();ctx.restore()}
+function rect(a,b,fill=false){let A=screen(a),B=screen(b);ctx.save();ctx.strokeRect(Math.min(A.x,B.x),Math.min(A.y,B.y),Math.abs(B.x-A.x),Math.abs(B.y-A.y));if(fill)ctx.fillRect(Math.min(A.x,B.x),Math.min(A.y,B.y),Math.abs(B.x-A.x),Math.abs(B.y-A.y));ctx.restore()}
+function drawObj(o,i){
+ ctx.save();ctx.strokeStyle=o.layer==='Structural'?'#8b3a2b':o.layer==='Dimensions'?'#2f6fa8':'#20282c';ctx.fillStyle=ctx.strokeStyle;ctx.lineWidth=o.type==='wall'||o.type==='beam'?Math.max(1,o.width*scale):2;
+ if(i===selected){ctx.strokeStyle='#d17b00';ctx.fillStyle='#d17b00'}
+ if(o.type==='line'||o.type==='wall'||o.type==='beam')line(o.a,o.b,ctx.lineWidth);
+ else if(o.type==='polyline'){for(let j=1;j<o.pts.length;j++)line(o.pts[j-1],o.pts[j],2)}
+ else if(o.type==='rectangle')rect(o.a,o.b)
+ else if(o.type==='column'){let s=o.size/2;rect({x:o.a.x-s,y:o.a.y-s},{x:o.a.x+s,y:o.a.y+s},true)}
+ else if(o.type==='circle'){let A=screen(o.a);ctx.beginPath();ctx.arc(A.x,A.y,o.r*scale,0,Math.PI*2);ctx.stroke()}
+ else if(o.type==='dimension'){line(o.a,o.b,2);let A=screen(o.a),B=screen(o.b);ctx.beginPath();ctx.arc(A.x,A.y,4,0,Math.PI*2);ctx.arc(B.x,B.y,4,0,Math.PI*2);ctx.stroke();ctx.font='12px Arial';ctx.fillText((dist(o.a,o.b)/1000).toFixed(2)+' m',(A.x+B.x)/2+5,(A.y+B.y)/2-5)}
+ ctx.restore()
 }
-function openArticle(id){
- const n=news.find(x=>x.id===id); if(!n)return;
- document.getElementById('home').style.display='none';
- document.getElementById('articlePage').style.display='block';
- document.getElementById('article').innerHTML=`
- <div class="kicker">${n.cat} • ${n.area}</div>
- <h1>${n.title}</h1><div class="meta">${n.place} • ${n.date}</div>
- <div class="article-photo"><span>PHOTO AREA — USE OWN / LICENSED / OFFICIAL IMAGE</span></div>
- <p class="lead">${n.lead}</p>
- <div class="article-body">${n.body.slice(1).map(p=>`<p>${p}</p>`).join('')}</div>
- <div class="sourcebox"><b>Editorial & source note</b><br>${n.body[n.body.length-1]}</div>`;
- window.scrollTo({top:0,behavior:'smooth'});
+function draw(){ctx.clearRect(0,0,W,H);drawGrid();objects.forEach(drawObj);if(temp){ctx.save();ctx.strokeStyle='#2f7d5a';ctx.setLineDash([5,5]);if(temp.type==='line'||temp.type==='wall'||temp.type==='beam'||temp.type==='dimension')line(temp.a,temp.b,2,true);else if(temp.type==='rectangle')rect(temp.a,temp.b);else if(temp.type==='circle'){let A=screen(temp.a);ctx.beginPath();ctx.arc(A.x,A.y,temp.r*scale,0,Math.PI*2);ctx.stroke()}ctx.restore()}document.getElementById('zoomText').textContent=Math.round(scale*100)+'%';updateStatus()}
+function updateStatus(){let p=lastPoint||{x:0,y:0};document.getElementById('status').textContent=`X: ${p.x.toFixed(0)}  Y: ${p.y.toFixed(0)} | Grid: ${document.getElementById('gridOn').checked?'ON':'OFF'} | Snap: ${document.getElementById('snap').checked?'ON':'OFF'}`}
+let lastPoint={x:0,y:0};
+
+canvas.addEventListener('mousemove',e=>{if(panning){ox+=e.clientX-panLast.x;oy+=e.clientY-panLast.y;panLast={x:e.clientX,y:e.clientY};draw();return}let p=world(e);lastPoint=p;if(start){if(tool==='circle')temp={type:'circle',a:start,r:dist(start,p)};else temp={type:tool==='wall'?'wall':tool,a:start,b:p,width:tool==='wall'?(+document.getElementById('wallThick').value/2):tool==='beam'?0.2:2}}draw()});
+canvas.addEventListener('mousedown',e=>{
+ if(e.button===1||e.shiftKey){panning=true;panLast={x:e.clientX,y:e.clientY};return}
+ let p=world(e);
+ if(tool==='select'){selected=hit(p);draw();return}
+ if(tool==='erase'){let h=hit(p);if(h>=0){pushHistory();objects.splice(h,1);selected=-1;draw()}return}
+ if(tool==='column'){add({type:'column',a:p,size:+document.getElementById('colSize').value});return}
+ if(tool==='polyline'){if(!start){start=p;temp={type:'polyline',pts:[p]}}else{temp.pts.push(p)}draw();return}
+ if(!start){start=p;temp=null}else{let o;
+  if(tool==='line'||tool==='wall'||tool==='beam'||tool==='dimension')o={type:tool==='wall'?'wall':tool,a:start,b:p,width:tool==='wall'?+document.getElementById('wallThick').value:tool==='beam'?+document.getElementById('colSize').value/2:2};
+  if(tool==='rectangle')o={type:'rectangle',a:start,b:p};
+  if(tool==='circle')o={type:'circle',a:start,r:dist(start,p)};
+  if(o)add(o);start=null;temp=null; if(tool==='dimension')setTool('select');
+ }
+});
+canvas.addEventListener('dblclick',e=>{if(tool==='polyline'&&temp){add({type:'polyline',pts:temp.pts});start=null;temp=null;setTool('select')}});
+canvas.addEventListener('mouseup',e=>{if(e.button===1||e.shiftKey)panning=false});
+canvas.addEventListener('wheel',e=>{e.preventDefault();zoom(e.deltaY<0?1.12:.89,{x:e.clientX,y:e.clientY})},{passive:false});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){start=null;temp=null;setTool('select')}if((e.ctrlKey||e.metaKey)&&e.key==='z')undo();if((e.ctrlKey||e.metaKey)&&e.key==='y')redo()});
+
+function hit(p){let best=-1,bd=Infinity;objects.forEach((o,i)=>{let d=999999;if(o.type==='column')d=dist(p,o.a)-o.size/2;else if(o.type==='circle')d=Math.abs(dist(p,o.a)-o.r);else if(o.a&&o.b)d=pointLine(p,o.a,o.b);if(d<bd&&d<300){bd=d;best=i}});return best}
+function pointLine(p,a,b){let dx=b.x-a.x,dy=b.y-a.y,t=((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy||1);t=Math.max(0,Math.min(1,t));return Math.hypot(p.x-(a.x+t*dx),p.y-(a.y+t*dy))}
+function zoom(f,center){if(center){let r=canvas.getBoundingClientRect(),cx=center.x-r.left,cy=center.y-r.top;ox=cx-(cx-ox)*f;oy=cy-(cy-oy)*f}else{ox=W/2-(W/2-ox)*f;oy=H/2-(H/2-oy)*f}scale=Math.max(.1,Math.min(8,scale*f));draw()}
+function fitView(){if(!objects.length){scale=1;ox=80;oy=80;draw();return}let xs=[],ys=[];objects.forEach(o=>{if(o.a){xs.push(o.a.x);ys.push(o.a.y)}if(o.b){xs.push(o.b.x);ys.push(o.b.y)}if(o.pts)o.pts.forEach(p=>{xs.push(p.x);ys.push(p.y)})});let minx=Math.min(...xs),maxx=Math.max(...xs),miny=Math.min(...ys),maxy=Math.max(...ys),cw=Math.max(100,maxx-minx),ch=Math.max(100,maxy-miny);scale=Math.min((W-120)/cw,(H-120)/ch);scale=Math.max(.1,Math.min(4,scale));ox=W/2-(minx+maxx)/2*scale;oy=H/2-(miny+maxy)/2*scale;draw()}
+function newDrawing(){if(confirm('Start a new drawing?')){objects=[];history=[];future=[];selected=-1;draw()}}
+function saveDrawing(){localStorage.setItem('rmaCAD',JSON.stringify({objects,scale,ox,oy,currentLayer}));alert('Drawing saved in this browser.')}
+function loadDrawing(){let s=localStorage.getItem('rmaCAD');if(!s)return alert('No saved drawing found.');let d=JSON.parse(s);objects=d.objects||[];scale=d.scale||1;ox=d.ox||80;oy=d.oy||80;currentLayer=d.currentLayer||'Architectural';document.getElementById('layer').value=currentLayer;draw()}
+function exportSVG(){
+ let out=`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800"><rect width="100%" height="100%" fill="white">`;
+ objects.forEach(o=>{let col=o.layer==='Structural'?'#8b3a2b':'#20282c';
+  if(o.type==='line'||o.type==='wall'||o.type==='beam')out+=`<line x1="${o.a.x}" y1="${o.a.y}" x2="${o.b.x}" y2="${o.b.y}" stroke="${col}" stroke-width="${o.width||2}"/>`;
+  if(o.type==='rectangle')out+=`<rect x="${Math.min(o.a.x,o.b.x)}" y="${Math.min(o.a.y,o.b.y)}" width="${Math.abs(o.b.x-o.a.x)}" height="${Math.abs(o.b.y-o.a.y)}" fill="none" stroke="${col}"/>`;
+  if(o.type==='circle')out+=`<circle cx="${o.a.x}" cy="${o.a.y}" r="${o.r}" fill="none" stroke="${col}"/>`;
+  if(o.type==='column')out+=`<rect x="${o.a.x-o.size/2}" y="${o.a.y-o.size/2}" width="${o.size}" height="${o.size}" fill="${col}"/>`;
+ });out+='</svg>';let blob=new Blob([out],{type:'image/svg+xml'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='RMA-CAD-drawing.svg';a.click();URL.revokeObjectURL(a.href)
 }
-function goHome(){document.getElementById('articlePage').style.display='none';document.getElementById('home').style.display='block';window.scrollTo({top:0,behavior:'smooth'});}
-function filterNews(cat,btn){
- document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active')); if(btn)btn.classList.add('active');
- const arr=cat==='All'?news:news.filter(n=>n.cat===cat||n.area===cat);
- document.getElementById('home').style.display='block';document.getElementById('articlePage').style.display='none';
- document.getElementById('latest').innerHTML=arr.length?arr.map(card).join(''):`<div class="empty">No stories in this section.</div>`;
- document.getElementById('coverage').innerHTML='';
- window.scrollTo({top:0,behavior:'smooth'});
-}
-function searchNews(){
- const q=document.getElementById('search').value.trim().toLowerCase();
- if(!q){render();return}
- const arr=news.filter(n=>(n.title+' '+n.lead+' '+n.cat+' '+n.area+' '+n.place).toLowerCase().includes(q));
- document.getElementById('home').style.display='block';document.getElementById('articlePage').style.display='none';
- document.getElementById('latest').innerHTML=arr.length?arr.map(card).join(''):`<div class="empty">No matching stories found.</div>`;
- document.getElementById('coverage').innerHTML='';
- window.scrollTo({top:0,behavior:'smooth'});
-}
-render();
 </script>
 </body>
 </html>
