@@ -199,5 +199,25 @@ function saveDrawing(){localStorage.setItem('rmaCADV2',JSON.stringify({objects,s
 function loadDrawing(){let s=localStorage.getItem('rmaCADV2');if(!s)return alert('No saved project found.');let x=JSON.parse(s);objects=x.objects||[];scale=x.scale||.12;ox=x.ox||90;oy=x.oy||90;currentLayer=x.currentLayer||'Architectural';document.getElementById('layer').value=currentLayer;draw()}
 function exportSVG(){let out=`<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="1400" viewBox="0 0 2000 1400"><rect width="100%" height="100%" fill="white"/>`;objects.forEach(o=>{let col=o.layer==='Structural'?'#8b3a2b':'#263238';if(o.type==='line'||o.type==='wall'||o.type==='beam')out+=`<line x1="${o.a.x}" y1="${o.a.y}" x2="${o.b.x}" y2="${o.b.y}" stroke="${col}" stroke-width="${o.width||2}"/>`;if(o.type==='rectangle'||o.type==='room'||o.type==='slab'||o.type==='footing')out+=`<rect x="${Math.min(o.a.x,o.b.x)}" y="${Math.min(o.a.y,o.b.y)}" width="${Math.abs(o.b.x-o.a.x)}" height="${Math.abs(o.b.y-o.a.y)}" fill="none" stroke="${col}"/>`;if(o.type==='circle')out+=`<circle cx="${o.a.x}" cy="${o.a.y}" r="${o.r}" fill="none" stroke="${col}"/>`;if(o.type==='column')out+=`<rect x="${o.a.x-o.size/2}" y="${o.a.y-o.size/2}" width="${o.size}" height="${o.size}" fill="${col}"/>`;if(o.type==='text')out+=`<text x="${o.a.x}" y="${o.a.y}" font-size="${o.h}" fill="${col}">${String(o.text).replace(/[<>&]/g,m=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[m]))}</text>`});out+='</svg>';let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([out],{type:'image/svg+xml'}));a.download='RMA-CAD-V2.svg';a.click()}
 </script>
+
+<style>
+#cmdPalette{position:fixed;left:50%;top:18%;transform:translateX(-50%);width:min(720px,90vw);background:#fff;border:1px solid #8e999e;border-radius:8px;box-shadow:0 15px 45px rgba(0,0,0,.25);display:none;z-index:1000;overflow:hidden}
+#cmdPalette .cphead{background:#18362c;color:#fff;padding:11px 14px;font-weight:700}
+#cmdPalette .cpbody{padding:10px}
+#cpInput{width:100%;padding:11px;border:1px solid #aeb8bc;border-radius:5px;font:14px monospace}
+#cpList{max-height:360px;overflow:auto;margin-top:8px}
+.cpitem{display:flex;justify-content:space-between;padding:7px 9px;border-radius:4px;font:12px monospace;cursor:pointer}
+.cpitem:hover,.cpitem.sel{background:#e7f2ed}
+.cpitem small{color:#68767b;font-family:Arial}
+#cmdHelp{position:fixed;right:22px;bottom:62px;background:#fff;border:1px solid #cbd3d7;border-radius:6px;padding:8px 10px;font:11px monospace;display:none;z-index:999;box-shadow:0 5px 20px rgba(0,0,0,.15)}
+</style>
+<div id="cmdPalette">
+ <div class="cphead">RMA CAD — CAD Command Palette <span style="float:right;font-weight:400;font-size:11px">Esc to close</span></div>
+ <div class="cpbody">
+  <input id="cpInput" placeholder="Type command or alias: LINE, PL, OFFSET, TRIM, DIM, MTEXT..." autocomplete="off">
+  <div id="cpList"></div>
+ </div>
+</div>
+<div id="cmdHelp">F2: Command Palette &nbsp; | &nbsp; Esc: Cancel/Close &nbsp; | &nbsp; Enter: Run command</div>
 </body>
 </html>
