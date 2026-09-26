@@ -415,6 +415,113 @@ html, body {
   height: 100%;
 }
 
+/* AutoCAD Floating Dynamic Input Box Overlay */
+.dynamic-input-overlay {
+  position: absolute;
+  z-index: 50;
+  background-color: rgba(255, 255, 255, 0.95);
+  border: 1.5px solid var(--color-primary-light);
+  border-radius: 4px;
+  padding: 4px 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  pointer-events: auto;
+}
+
+.dyn-input-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dyn-input-group label {
+  font-weight: 700;
+  color: var(--color-primary-dark);
+  font-size: 10px;
+}
+
+.dyn-input-field {
+  width: 90px;
+  padding: 2px 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--border-color-dark);
+  border-radius: 3px;
+  background-color: #ffffff;
+  outline: none;
+}
+
+.dyn-input-field:focus {
+  border-color: var(--color-success);
+  box-shadow: 0 0 0 2px rgba(43, 147, 72, 0.2);
+}
+
+/* AutoCAD Command Line UI */
+.cad-command-line {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background-color: #111827;
+  color: #f9fafb;
+  border-top: 1px solid #374151;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.2);
+}
+
+.cmd-history-log {
+  max-height: 48px;
+  overflow-y: auto;
+  padding: 4px 8px;
+  background-color: #030712;
+  color: #9ca3af;
+  font-size: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cmd-log-line {
+  line-height: 1.3;
+}
+
+.cmd-input-row {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  gap: 6px;
+  background-color: #1f2937;
+}
+
+.cmd-prompt-label {
+  color: #10b981;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.cmd-input-field {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  outline: none;
+}
+
+.cmd-input-field::placeholder {
+  color: #6b7280;
+}
+
 .three-container {
   position: absolute;
   top: 0;
@@ -818,6 +925,17 @@ html, body {
   gap: 4px;
   background-color: var(--bg-panel-header);
   border-top: 1px solid var(--border-color);
+}
+
+.api-config-notice {
+  grid-column: 1 / -1;
+  padding: 12px;
+  background-color: var(--color-primary-subtle);
+  border: 1px solid var(--color-accent);
+  border-radius: 6px;
+  color: var(--color-primary-dark);
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 /* Modals */

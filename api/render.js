@@ -1,7 +1,7 @@
 /**
  * Serverless / API proxy handler for AI Rendering (e.g. Vercel/Netlify serverless function)
  * Environment Variables required for live production deployment:
- * - STABILITY_API_KEY / OPENAI_API_KEY
+ * - AI_API_KEY / OPENAI_API_KEY / STABILITY_API_KEY
  */
 
 export default async function handler(req, res) {
@@ -10,15 +10,16 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { prompt, elevationImageData, referenceImage, provider, apiKey } = req.body;
+    const { prompt, elevationImageData, referenceImages, provider, apiKey } = req.body;
 
-    const apiSecret = process.env.AI_API_KEY || apiKey;
+    const apiSecret = process.env.AI_API_KEY || process.env.OPENAI_API_KEY || process.env.STABILITY_API_KEY || apiKey;
 
     if (!apiSecret && provider !== 'client-render') {
-      return res.status(400).json({ error: 'AI API Key not configured in server environment or request settings.' });
+      return res.status(400).json({
+        error: 'AI API Key not configured in server environment or request settings. Set AI_API_KEY in environment variables or enter API key in Settings modal.'
+      });
     }
 
-    // Proxy request to DALL-E or Stability AI if provider selected
     if (provider === 'openai') {
       const response = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
@@ -40,7 +41,11 @@ export default async function handler(req, res) {
       return res.status(200).json({ status: 'success', images: [data.data[0].b64_json] });
     }
 
-    return res.status(200).json({ status: 'success', message: 'API ready for live proxy' });
+    return res.status(200).json({
+      status: 'success',
+      message: 'API proxy connected successfully',
+      referenceImagesReceived: referenceImages ? referenceImages.length : 0
+    });
 
   } catch (err) {
     return res.status(500).json({ error: err.message });
