@@ -1,0 +1,433 @@
+/**
+ * RMA Front Elevation Designer - CAD Drawing Tools & Inspector Manager
+ * Handles mouse events for drawing lines, rectangles, walls, windows, doors, balconies,
+ * columns, slabs, parapets, stairs, arcs, circles, dimensions, and text.
+ * Also handles object selection, drag-move, and parametric property updates in the right inspector.
+ */
+
+class CADToolManager {
+  constructor(cadCanvas) {
+    this.cad = cadCanvas;
+    this.isDrawing = false;
+    this.startPt = null;
+    this.currentPt = null;
+    this.drawingPoints = []; // For polyline
+    this.draggedObject = null;
+    this.dragOffset = { x: 0, y: 0 };
+
+    this.initCanvasListeners();
+  }
+
+  setTool(toolName) {
+    this.cad.activeTool = toolName;
+    this.isDrawing = false;
+    this.startPt = null;
+    this.drawingPoints = [];
+    this.cad.onDrawPreview = null;
+    if (this.cad.canvas && this.cad.canvas.style) {
+      this.cad.canvas.style.cursor = toolName === 'pan' ? 'grab' : (toolName === 'select' ? 'default' : 'crosshair');
+    }
+
+    const activeDisplay = typeof document !== 'undefined' ? document.getElementById('activeToolDisplay') : null;
+    if (activeDisplay) activeDisplay.textContent = toolName.toUpperCase();
+
+    // Clear preview on tool change
+    this.cad.render();
+  }
+
+  initCanvasListeners() {
+    const canvas = this.cad.canvas;
+    if (!canvas || !canvas.addEventListener) return;
+
+    canvas.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return; // Left click only
+      const pt = this.cad.snappedWorld;
+
+      if (this.cad.activeTool === 'select') {
+        this.handleSelectMouseDown(pt, e.shiftKey);
+      } else if (this.cad.activeTool === 'eraser') {
+        this.handleEraserClick(pt);
+      } else {
+        this.handleToolMouseDown(pt);
+      }
+    });
+
+    this.cad.onMouseMove = (e, snappedPt, rawPt) => {
+      if (this.draggedObject && this.cad.activeTool === 'select') {
+        const dx = snappedPt.x - this.dragOffset.x - this.draggedObject.getBounds().minX;
+        const dy = snappedPt.y - this.dragOffset.y - this.draggedObject.getBounds().minY;
+        this.draggedObject.move(dx, dy);
+        this.updateInspectorValues(this.draggedObject);
+        return;
+      }
+
+      if (this.isDrawing) {
+        this.currentPt = snappedPt;
+
+        // Apply Ortho locking if enabled (Shift key or toggle)
+        if (this.cad.orthoLock && this.startPt) {
+          const dx = Math.abs(this.currentPt.x - this.startPt.x);
+          const dy = Math.abs(this.currentPt.y - this.startPt.y);
+          if (dx > dy) {
+            this.currentPt.y = this.startPt.y;
+          } else {
+            this.currentPt.x = this.startPt.x;
+          }
+        }
+
+        this.updateDrawPreview();
+      }
+    };
+
+    if (typeof window !== 'undefined' && window.addEventListener) {
+      window.addEventListener('mouseup', (e) => {
+        if (this.draggedObject) {
+          this.cad.saveState();
+          this.draggedObject = null;
+        }
+
+        if (this.isDrawing && this.cad.activeTool !== 'polyline') {
+          this.finishDrawing();
+        }
+      });
+    }
+
+    // Double click to finish polyline
+    canvas.addEventListener('dblclick', () => {
+      if (this.cad.activeTool === 'polyline' && this.drawingPoints.length > 1) {
+        const poly = new CADPolyline([...this.drawingPoints]);
+        this.cad.addObject(poly);
+        this.isDrawing = false;
+        this.drawingPoints = [];
+        this.cad.onDrawPreview = null;
+        this.cad.render();
+      }
+    });
+  }
+
+  // Selection Logic
+  handleSelectMouseDown(pt, isShift) {
+    // Check if clicked an object (reverse order for top-most)
+    let hitObj = null;
+    for (let i = this.cad.objects.length - 1; i >= 0; i--) {
+      if (this.cad.objects[i].hitTest(pt.x, pt.y)) {
+        hitObj = this.cad.objects[i];
+        break;
+      }
+    }
+
+    if (hitObj) {
+      if (isShift) {
+        hitObj.selected = !hitObj.selected;
+      } else {
+        this.cad.objects.forEach(o => o.selected = false);
+        hitObj.selected = true;
+      }
+
+      this.draggedObject = hitObj;
+      const b = hitObj.getBounds();
+      this.dragOffset = { x: pt.x - b.minX, y: pt.y - b.minY };
+    } else if (!isShift) {
+      this.cad.objects.forEach(o => o.selected = false);
+    }
+
+    this.cad.selectedObjects = this.cad.objects.filter(o => o.selected);
+    this.updateSelectionDisplay();
+    this.renderInspector();
+    this.cad.render();
+  }
+
+  handleEraserClick(pt) {
+    for (let i = this.cad.objects.length - 1; i >= 0; i--) {
+      if (this.cad.objects[i].hitTest(pt.x, pt.y)) {
+        this.cad.removeObject(this.cad.objects[i]);
+        break;
+      }
+    }
+  }
+
+  updateSelectionDisplay() {
+    const selCount = this.cad.selectedObjects.length;
+    const disp = typeof document !== 'undefined' ? document.getElementById('selectionDisplay') : null;
+    if (disp) disp.textContent = `${selCount} object${selCount === 1 ? '' : 's'} selected`;
+  }
+
+  // Tool Drawing Flow
+  handleToolMouseDown(pt) {
+    this.isDrawing = true;
+    this.startPt = { ...pt };
+    this.currentPt = { ...pt };
+
+    if (this.cad.activeTool === 'polyline') {
+      this.drawingPoints.push({ ...pt });
+    } else if (this.cad.activeTool === 'text') {
+      const textVal = typeof window !== 'undefined' && window.prompt ? prompt('Enter Architectural Text Label:', 'Window W1') : 'Label';
+      if (textVal) {
+        const textObj = new CADText(pt.x, pt.y, textVal);
+        this.cad.addObject(textObj);
+      }
+      this.isDrawing = false;
+    }
+  }
+
+  updateDrawPreview() {
+    this.cad.onDrawPreview = (ctx, viewport) => {
+      if (!this.startPt || !this.currentPt) return;
+
+      const p1 = viewport.worldToScreen(this.startPt.x, this.startPt.y);
+      const p2 = viewport.worldToScreen(this.currentPt.x, this.currentPt.y);
+      ctx.strokeStyle = '#2d6a4f';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+
+      const w = Math.abs(this.currentPt.x - this.startPt.x);
+      const h = Math.abs(this.currentPt.y - this.startPt.y);
+      const minX = Math.min(this.startPt.x, this.currentPt.x);
+      const minY = Math.min(this.startPt.y, this.currentPt.y);
+
+      switch (this.cad.activeTool) {
+        case 'line':
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.stroke();
+          break;
+
+        case 'polyline':
+          if (this.drawingPoints.length > 0) {
+            ctx.beginPath();
+            const fp = viewport.worldToScreen(this.drawingPoints[0].x, this.drawingPoints[0].y);
+            ctx.moveTo(fp.x, fp.y);
+            for (let i = 1; i < this.drawingPoints.length; i++) {
+              const cp = viewport.worldToScreen(this.drawingPoints[i].x, this.drawingPoints[i].y);
+              ctx.lineTo(cp.x, cp.y);
+            }
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+          }
+          break;
+
+        case 'rectangle':
+        case 'wall':
+        case 'window':
+        case 'door':
+        case 'balcony':
+        case 'column':
+        case 'slab':
+        case 'parapet':
+        case 'stair': {
+          const sp = viewport.worldToScreen(minX, minY + h);
+          ctx.strokeRect(sp.x, sp.y, w * viewport.zoom, h * viewport.zoom);
+          break;
+        }
+
+        case 'circle': {
+          const radius = Math.hypot(this.currentPt.x - this.startPt.x, this.currentPt.y - this.startPt.y);
+          ctx.beginPath();
+          ctx.arc(p1.x, p1.y, radius * viewport.zoom, 0, Math.PI * 2);
+          ctx.stroke();
+          break;
+        }
+
+        case 'arc': {
+          const radius = Math.hypot(this.currentPt.x - this.startPt.x, this.currentPt.y - this.startPt.y);
+          ctx.beginPath();
+          ctx.arc(p1.x, p1.y, radius * viewport.zoom, 0, Math.PI, true);
+          ctx.stroke();
+          break;
+        }
+
+        case 'dimension': {
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.stroke();
+          break;
+        }
+      }
+
+      ctx.setLineDash([]);
+    };
+  }
+
+  finishDrawing() {
+    if (!this.startPt || !this.currentPt) return;
+
+    const w = Math.abs(this.currentPt.x - this.startPt.x);
+    const h = Math.abs(this.currentPt.y - this.startPt.y);
+    const minX = Math.min(this.startPt.x, this.currentPt.x);
+    const minY = Math.min(this.startPt.y, this.currentPt.y);
+
+    // Minimum drawing threshold to prevent tiny accidental objects
+    if (w < 0.1 && h < 0.1 && !['line', 'circle', 'arc', 'dimension'].includes(this.cad.activeTool)) {
+      this.isDrawing = false;
+      this.cad.onDrawPreview = null;
+      this.cad.render();
+      return;
+    }
+
+    let newObj = null;
+
+    switch (this.cad.activeTool) {
+      case 'line':
+        newObj = new CADLine(this.startPt.x, this.startPt.y, this.currentPt.x, this.currentPt.y);
+        break;
+      case 'rectangle':
+        newObj = new CADRect(minX, minY, w, h, 'rectangle');
+        break;
+      case 'wall':
+        newObj = new CADRect(minX, minY, w, h, 'wall');
+        break;
+      case 'window':
+        newObj = new CADWindow(minX, minY, w || 5, h || 4);
+        break;
+      case 'door':
+        newObj = new CADDoor(minX, minY, w || 3.5, h || 7);
+        break;
+      case 'balcony':
+        newObj = new CADBalcony(minX, minY, w || 10, h || 3.5);
+        break;
+      case 'column':
+        newObj = new CADColumn(minX, minY, w || 1.5, h || 10);
+        break;
+      case 'slab':
+        newObj = new CADSlab(minX, minY, w || 40, h || 1);
+        break;
+      case 'parapet':
+        newObj = new CADParapet(minX, minY, w || 40, h || 4);
+        break;
+      case 'stair':
+        newObj = new CADStair(minX, minY, w || 6, h || 4);
+        break;
+      case 'circle': {
+        const radius = Math.hypot(this.currentPt.x - this.startPt.x, this.currentPt.y - this.startPt.y);
+        newObj = new CADCircle(this.startPt.x, this.startPt.y, radius || 5);
+        break;
+      }
+      case 'arc': {
+        const radius = Math.hypot(this.currentPt.x - this.startPt.x, this.currentPt.y - this.startPt.y);
+        newObj = new CADArc(this.startPt.x, this.startPt.y, radius || 5, 0, Math.PI);
+        break;
+      }
+      case 'dimension':
+        newObj = new CADDimension(this.startPt.x, this.startPt.y, this.currentPt.x, this.currentPt.y, 1.5);
+        break;
+    }
+
+    if (newObj) {
+      this.cad.addObject(newObj);
+    }
+
+    this.isDrawing = false;
+    this.startPt = null;
+    this.currentPt = null;
+    this.cad.onDrawPreview = null;
+    this.cad.render();
+  }
+
+  // Parametric Inspector Rendering
+  renderInspector() {
+    if (typeof document === 'undefined') return;
+    const container = document.getElementById('inspectorContent');
+    if (!container) return;
+
+    if (this.cad.selectedObjects.length === 0) {
+      container.innerHTML = '<p class="empty-inspector-msg">Select an object on the canvas to inspect & edit architectural parameters.</p>';
+      return;
+    }
+
+    if (this.cad.selectedObjects.length > 1) {
+      container.innerHTML = `<p class="empty-inspector-msg">${this.cad.selectedObjects.length} objects selected (Multiple selection).</p>`;
+      return;
+    }
+
+    const obj = this.cad.selectedObjects[0];
+    let html = `<div class="form-group"><label>Object Type:</label><input class="input-text" value="${obj.type.toUpperCase()}" disabled></div>`;
+
+    if (['rectangle', 'wall', 'window', 'door', 'balcony', 'column', 'slab', 'parapet', 'stair'].includes(obj.type)) {
+      html += `
+        <div class="form-grid-2col">
+          <div class="form-group"><label>X Position:</label><input type="number" id="inspX" class="input-text" step="0.1" value="${obj.x.toFixed(2)}"></div>
+          <div class="form-group"><label>Y Position:</label><input type="number" id="inspY" class="input-text" step="0.1" value="${obj.y.toFixed(2)}"></div>
+          <div class="form-group"><label>Width (${Units.currentUnit}):</label><input type="number" id="inspW" class="input-text" step="0.1" value="${obj.width.toFixed(2)}"></div>
+          <div class="form-group"><label>Height (${Units.currentUnit}):</label><input type="number" id="inspH" class="input-text" step="0.1" value="${obj.height.toFixed(2)}"></div>
+        </div>
+      `;
+
+      if (obj.type === 'window') {
+        html += `
+          <div class="form-group"><label>Sill Height:</label><input type="number" id="inspSill" class="input-text" value="${obj.sillHeight}"></div>
+          <div class="form-group"><label>Frame Type:</label>
+            <select id="inspFrame" class="input-select">
+              <option value="Aluminium Glass" ${obj.frameType === 'Aluminium Glass' ? 'selected' : ''}>Aluminium Glass</option>
+              <option value="UPVC White" ${obj.frameType === 'UPVC White' ? 'selected' : ''}>UPVC White</option>
+              <option value="Teak Wood" ${obj.frameType === 'Teak Wood' ? 'selected' : ''}>Teak Wood</option>
+              <option value="Black Anodized" ${obj.frameType === 'Black Anodized' ? 'selected' : ''}>Black Anodized</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Shutters:</label><input type="number" id="inspShutters" class="input-text" min="1" max="6" value="${obj.shutters}"></div>
+        `;
+      }
+
+      if (obj.type === 'door') {
+        html += `
+          <div class="form-group"><label>Door Type:</label>
+            <select id="inspDoorType" class="input-select">
+              <option value="Main Entrance Door" ${obj.doorType === 'Main Entrance Door' ? 'selected' : ''}>Main Entrance Door</option>
+              <option value="Service Door" ${obj.doorType === 'Service Door' ? 'selected' : ''}>Service Door</option>
+              <option value="Garage Door" ${obj.doorType === 'Garage Door' ? 'selected' : ''}>Garage Door</option>
+            </select>
+          </div>
+        `;
+      }
+
+      if (obj.type === 'balcony') {
+        html += `
+          <div class="form-group"><label>Railing Type:</label>
+            <select id="inspRailing" class="input-select">
+              <option value="Glass Railing" ${obj.railingType === 'Glass Railing' ? 'selected' : ''}>Glass Railing</option>
+              <option value="Metal Vertical Fins" ${obj.railingType === 'Metal Vertical Fins' ? 'selected' : ''}>Metal Vertical Fins</option>
+              <option value="Brick Parapet" ${obj.railingType === 'Brick Parapet' ? 'selected' : ''}>Brick Parapet</option>
+            </select>
+          </div>
+        `;
+      }
+    }
+
+    container.innerHTML = html;
+    this.attachInspectorEvents(obj);
+  }
+
+  attachInspectorEvents(obj) {
+    const bindInput = (id, prop, isNum = true) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('change', () => {
+        this.cad.saveState();
+        obj[prop] = isNum ? parseFloat(el.value) : el.value;
+        this.cad.render();
+      });
+    };
+
+    bindInput('inspX', 'x');
+    bindInput('inspY', 'y');
+    bindInput('inspW', 'width');
+    bindInput('inspH', 'height');
+    bindInput('inspSill', 'sillHeight');
+    bindInput('inspFrame', 'frameType', false);
+    bindInput('inspShutters', 'shutters');
+    bindInput('inspDoorType', 'doorType', false);
+    bindInput('inspRailing', 'railingType', false);
+  }
+
+  updateInspectorValues(obj) {
+    const setVal = (id, val) => {
+      const el = typeof document !== 'undefined' ? document.getElementById(id) : null;
+      if (el) el.value = typeof val === 'number' ? val.toFixed(2) : val;
+    };
+    setVal('inspX', obj.x);
+    setVal('inspY', obj.y);
+  }
+}
+
+window.CADToolManager = CADToolManager;
