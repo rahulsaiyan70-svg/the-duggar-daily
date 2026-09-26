@@ -1,8 +1,8 @@
 /**
- * RMA Front Elevation Designer - CAD Drawing Tools & Inspector Manager
- * Handles mouse events for drawing lines, rectangles, walls, windows, doors, balconies,
- * columns, slabs, parapets, stairs, arcs, circles, dimensions, and text.
- * Also handles object selection, drag-move, and parametric property updates in the right inspector.
+ * RMA Front Elevation Designer - CAD Drawing Tools & Dynamic Input Manager
+ * Handles mouse and dynamic floating input overlay for precise geometric creation
+ * (Line, Polyline, Rectangle, Wall, Window, Door, Balcony, Column, Slab, Parapet, Stair, Dimension, Text).
+ * Supports AutoCAD shortcuts, ORTHO mode (F8), OSNAP, and Parametric Inspector updates.
  */
 
 class CADToolManager {
@@ -11,11 +11,166 @@ class CADToolManager {
     this.isDrawing = false;
     this.startPt = null;
     this.currentPt = null;
-    this.drawingPoints = []; // For polyline
+    this.drawingPoints = []; // Polyline points
     this.draggedObject = null;
     this.dragOffset = { x: 0, y: 0 };
 
+    // Dynamic Input Overlay Elements
+    this.dynamicInputContainer = null;
+    this.createDynamicInputDOM();
+
     this.initCanvasListeners();
+    this.initKeyboardShortcuts();
+  }
+
+  createDynamicInputDOM() {
+    if (typeof document === 'undefined') return;
+    let container = document.getElementById('dynamicInputContainer');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'dynamicInputContainer';
+      container.className = 'dynamic-input-overlay hidden';
+      const viewport = document.getElementById('canvasViewport') || document.body;
+      viewport.appendChild(container);
+    }
+    this.dynamicInputContainer = container;
+  }
+
+  showDynamicInput(screenX, screenY, toolName, values = {}) {
+    if (!this.dynamicInputContainer) return;
+
+    this.dynamicInputContainer.style.left = `${screenX + 20}px`;
+    this.dynamicInputContainer.style.top = `${screenY + 20}px`;
+    this.dynamicInputContainer.classList.remove('hidden');
+
+    if (['line', 'wall', 'polyline'].includes(toolName)) {
+      const lenStr = typeof Units !== 'undefined' ? Units.format(values.length || 0) : `${(values.length || 0).toFixed(2)}'`;
+      const angleStr = `${Math.round(values.angle || 0)}°`;
+
+      this.dynamicInputContainer.innerHTML = `
+        <div class="dyn-input-group">
+          <label>Length:</label>
+          <input type="text" id="dynLenInput" value="${lenStr}" class="dyn-input-field">
+        </div>
+        <div class="dyn-input-group">
+          <label>Angle:</label>
+          <input type="text" id="dynAngleInput" value="${angleStr}" class="dyn-input-field">
+        </div>
+      `;
+    } else if (['rectangle', 'window', 'door', 'balcony', 'column', 'slab', 'parapet', 'stair'].includes(toolName)) {
+      const wStr = typeof Units !== 'undefined' ? Units.format(values.width || 0) : `${(values.width || 0).toFixed(2)}'`;
+      const hStr = typeof Units !== 'undefined' ? Units.format(values.height || 0) : `${(values.height || 0).toFixed(2)}'`;
+
+      this.dynamicInputContainer.innerHTML = `
+        <div class="dyn-input-group">
+          <label>Width:</label>
+          <input type="text" id="dynWidthInput" value="${wStr}" class="dyn-input-field">
+        </div>
+        <div class="dyn-input-group">
+          <label>Height:</label>
+          <input type="text" id="dynHeightInput" value="${hStr}" class="dyn-input-field">
+        </div>
+      `;
+    }
+
+    this.attachDynamicInputListeners();
+  }
+
+  hideDynamicInput() {
+    if (this.dynamicInputContainer) {
+      this.dynamicInputContainer.classList.add('hidden');
+    }
+  }
+
+  attachDynamicInputListeners() {
+    if (!this.dynamicInputContainer) return;
+
+    const fields = this.dynamicInputContainer.querySelectorAll('.dyn-input-field');
+    fields.forEach(field => {
+      field.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          this.applyDynamicInput();
+        } else if (e.key === 'Escape') {
+          this.isDrawing = false;
+          this.hideDynamicInput();
+          this.cad.render();
+        }
+      });
+    });
+  }
+
+  applyDynamicInput() {
+    if (!this.startPt) return;
+
+    const tool = this.cad.activeTool;
+
+    if (['line', 'wall', 'polyline'].includes(tool)) {
+      const lenInput = document.getElementById('dynLenInput');
+      const angleInput = document.getElementById('dynAngleInput');
+
+      if (lenInput) {
+        const distFeet = Units.toFeet(lenInput.value);
+        let angleDeg = 0;
+        if (angleInput) {
+          angleDeg = parseFloat(angleInput.value.replace('°', '')) || 0;
+        } else {
+          // Keep current mouse angle
+          const dx = this.currentPt.x - this.startPt.x;
+          const dy = this.currentPt.y - this.startPt.y;
+          angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
+        }
+
+        const rad = (angleDeg * Math.PI) / 180;
+        const targetPt = {
+          x: this.startPt.x + distFeet * Math.cos(rad),
+          y: this.startPt.y + distFeet * Math.sin(rad)
+        };
+
+        if (tool === 'line') {
+          this.cad.addObject(new CADLine(this.startPt.x, this.startPt.y, targetPt.x, targetPt.y));
+        } else if (tool === 'wall') {
+          const thickness = 0.75; // 9 inches
+          this.cad.addObject(new CADRect(this.startPt.x, this.startPt.y, distFeet, thickness, 'wall'));
+        } else if (tool === 'polyline') {
+          this.drawingPoints.push(targetPt);
+          this.startPt = targetPt;
+        }
+
+        this.hideDynamicInput();
+        this.isDrawing = false;
+        this.cad.render();
+      }
+    } else if (['rectangle', 'window', 'door', 'balcony', 'column', 'slab', 'parapet', 'stair'].includes(tool)) {
+      const wInput = document.getElementById('dynWidthInput');
+      const hInput = document.getElementById('dynHeightInput');
+
+      if (wInput && hInput) {
+        const widthFeet = Units.toFeet(wInput.value);
+        const heightFeet = Units.toFeet(hInput.value);
+        const minX = this.startPt.x;
+        const minY = this.startPt.y;
+
+        let newObj = null;
+        switch (tool) {
+          case 'rectangle': newObj = new CADRect(minX, minY, widthFeet, heightFeet, 'rectangle'); break;
+          case 'wall': newObj = new CADRect(minX, minY, widthFeet, heightFeet, 'wall'); break;
+          case 'window': newObj = new CADWindow(minX, minY, widthFeet, heightFeet); break;
+          case 'door': newObj = new CADDoor(minX, minY, widthFeet, heightFeet); break;
+          case 'balcony': newObj = new CADBalcony(minX, minY, widthFeet, heightFeet); break;
+          case 'column': newObj = new CADColumn(minX, minY, widthFeet, heightFeet); break;
+          case 'slab': newObj = new CADSlab(minX, minY, widthFeet, heightFeet); break;
+          case 'parapet': newObj = new CADParapet(minX, minY, widthFeet, heightFeet); break;
+          case 'stair': newObj = new CADStair(minX, minY, widthFeet, heightFeet); break;
+        }
+
+        if (newObj) this.cad.addObject(newObj);
+
+        this.hideDynamicInput();
+        this.isDrawing = false;
+        this.cad.render();
+      }
+    }
   }
 
   setTool(toolName) {
@@ -24,15 +179,47 @@ class CADToolManager {
     this.startPt = null;
     this.drawingPoints = [];
     this.cad.onDrawPreview = null;
-    if (this.cad.canvas && this.cad.canvas.style) {
-      this.cad.canvas.style.cursor = toolName === 'pan' ? 'grab' : (toolName === 'select' ? 'default' : 'crosshair');
-    }
+    this.hideDynamicInput();
 
     const activeDisplay = typeof document !== 'undefined' ? document.getElementById('activeToolDisplay') : null;
     if (activeDisplay) activeDisplay.textContent = toolName.toUpperCase();
 
-    // Clear preview on tool change
     this.cad.render();
+  }
+
+  initKeyboardShortcuts() {
+    if (typeof window === 'undefined') return;
+
+    window.addEventListener('keydown', (e) => {
+      // Avoid overriding input fields
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+
+      if (e.key === 'F8') {
+        e.preventDefault();
+        this.cad.orthoLock = !this.cad.orthoLock;
+        const btnOrtho = document.getElementById('btnToggleOrtho');
+        if (btnOrtho) btnOrtho.classList.toggle('active', this.cad.orthoLock);
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        this.isDrawing = false;
+        this.cad.selectedObjects.forEach(o => o.selected = false);
+        this.cad.selectedObjects = [];
+        this.hideDynamicInput();
+        this.renderInspector();
+        this.cad.render();
+        return;
+      }
+
+      // Delete selected
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (this.cad.selectedObjects.length > 0) {
+          this.cad.deleteSelected();
+          this.renderInspector();
+        }
+      }
+    });
   }
 
   initCanvasListeners() {
@@ -40,7 +227,7 @@ class CADToolManager {
     if (!canvas || !canvas.addEventListener) return;
 
     canvas.addEventListener('mousedown', (e) => {
-      if (e.button !== 0) return; // Left click only
+      if (e.button !== 0) return;
       const pt = this.cad.snappedWorld;
 
       if (this.cad.activeTool === 'select') {
@@ -48,7 +235,7 @@ class CADToolManager {
       } else if (this.cad.activeTool === 'eraser') {
         this.handleEraserClick(pt);
       } else {
-        this.handleToolMouseDown(pt);
+        this.handleToolMouseDown(pt, e);
       }
     });
 
@@ -62,9 +249,8 @@ class CADToolManager {
       }
 
       if (this.isDrawing) {
-        this.currentPt = snappedPt;
+        this.currentPt = { ...snappedPt };
 
-        // Apply Ortho locking if enabled (Shift key or toggle)
         if (this.cad.orthoLock && this.startPt) {
           const dx = Math.abs(this.currentPt.x - this.startPt.x);
           const dy = Math.abs(this.currentPt.y - this.startPt.y);
@@ -74,6 +260,20 @@ class CADToolManager {
             this.currentPt.x = this.startPt.x;
           }
         }
+
+        const len = GeometryUtils.distance(this.startPt, this.currentPt);
+        const dx = this.currentPt.x - this.startPt.x;
+        const dy = this.currentPt.y - this.startPt.y;
+        const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+        const w = Math.abs(dx);
+        const h = Math.abs(dy);
+
+        this.showDynamicInput(this.cad.cursorScreen.x, this.cad.cursorScreen.y, this.cad.activeTool, {
+          length: len,
+          angle: angle,
+          width: w,
+          height: h
+        });
 
         this.updateDrawPreview();
       }
@@ -86,28 +286,30 @@ class CADToolManager {
           this.draggedObject = null;
         }
 
+        // Complete freehand drag drawing on mouseup if not typing exact numerical input
         if (this.isDrawing && this.cad.activeTool !== 'polyline') {
-          this.finishDrawing();
+          const isInputFocused = document.activeElement && document.activeElement.classList.contains('dyn-input-field');
+          if (!isInputFocused) {
+            this.finishDrawing();
+          }
         }
       });
     }
 
-    // Double click to finish polyline
     canvas.addEventListener('dblclick', () => {
       if (this.cad.activeTool === 'polyline' && this.drawingPoints.length > 1) {
         const poly = new CADPolyline([...this.drawingPoints]);
         this.cad.addObject(poly);
         this.isDrawing = false;
         this.drawingPoints = [];
+        this.hideDynamicInput();
         this.cad.onDrawPreview = null;
         this.cad.render();
       }
     });
   }
 
-  // Selection Logic
   handleSelectMouseDown(pt, isShift) {
-    // Check if clicked an object (reverse order for top-most)
     let hitObj = null;
     for (let i = this.cad.objects.length - 1; i >= 0; i--) {
       if (this.cad.objects[i].hitTest(pt.x, pt.y)) {
@@ -152,21 +354,22 @@ class CADToolManager {
     if (disp) disp.textContent = `${selCount} object${selCount === 1 ? '' : 's'} selected`;
   }
 
-  // Tool Drawing Flow
-  handleToolMouseDown(pt) {
-    this.isDrawing = true;
-    this.startPt = { ...pt };
-    this.currentPt = { ...pt };
+  handleToolMouseDown(pt, e) {
+    if (!this.isDrawing) {
+      this.isDrawing = true;
+      this.startPt = { ...pt };
+      this.currentPt = { ...pt };
 
-    if (this.cad.activeTool === 'polyline') {
-      this.drawingPoints.push({ ...pt });
-    } else if (this.cad.activeTool === 'text') {
-      const textVal = typeof window !== 'undefined' && window.prompt ? prompt('Enter Architectural Text Label:', 'Window W1') : 'Label';
-      if (textVal) {
-        const textObj = new CADText(pt.x, pt.y, textVal);
-        this.cad.addObject(textObj);
+      if (this.cad.activeTool === 'polyline') {
+        this.drawingPoints.push({ ...pt });
+      } else if (this.cad.activeTool === 'text') {
+        const textVal = typeof window !== 'undefined' && window.prompt ? prompt('Enter Architectural Text Label:', 'Window W1') : 'Label';
+        if (textVal) {
+          const textObj = new CADText(pt.x, pt.y, textVal);
+          this.cad.addObject(textObj);
+        }
+        this.isDrawing = false;
       }
-      this.isDrawing = false;
     }
   }
 
@@ -258,9 +461,9 @@ class CADToolManager {
     const minX = Math.min(this.startPt.x, this.currentPt.x);
     const minY = Math.min(this.startPt.y, this.currentPt.y);
 
-    // Minimum drawing threshold to prevent tiny accidental objects
     if (w < 0.1 && h < 0.1 && !['line', 'circle', 'arc', 'dimension'].includes(this.cad.activeTool)) {
       this.isDrawing = false;
+      this.hideDynamicInput();
       this.cad.onDrawPreview = null;
       this.cad.render();
       return;
@@ -321,6 +524,7 @@ class CADToolManager {
     this.isDrawing = false;
     this.startPt = null;
     this.currentPt = null;
+    this.hideDynamicInput();
     this.cad.onDrawPreview = null;
     this.cad.render();
   }
@@ -345,12 +549,13 @@ class CADToolManager {
     let html = `<div class="form-group"><label>Object Type:</label><input class="input-text" value="${obj.type.toUpperCase()}" disabled></div>`;
 
     if (['rectangle', 'wall', 'window', 'door', 'balcony', 'column', 'slab', 'parapet', 'stair'].includes(obj.type)) {
+      const unitLabel = typeof Units !== 'undefined' ? Units.currentUnit : 'ft';
       html += `
         <div class="form-grid-2col">
           <div class="form-group"><label>X Position:</label><input type="number" id="inspX" class="input-text" step="0.1" value="${obj.x.toFixed(2)}"></div>
           <div class="form-group"><label>Y Position:</label><input type="number" id="inspY" class="input-text" step="0.1" value="${obj.y.toFixed(2)}"></div>
-          <div class="form-group"><label>Width (${Units.currentUnit}):</label><input type="number" id="inspW" class="input-text" step="0.1" value="${obj.width.toFixed(2)}"></div>
-          <div class="form-group"><label>Height (${Units.currentUnit}):</label><input type="number" id="inspH" class="input-text" step="0.1" value="${obj.height.toFixed(2)}"></div>
+          <div class="form-group"><label>Width (${unitLabel}):</label><input type="number" id="inspW" class="input-text" step="0.1" value="${obj.width.toFixed(2)}"></div>
+          <div class="form-group"><label>Height (${unitLabel}):</label><input type="number" id="inspH" class="input-text" step="0.1" value="${obj.height.toFixed(2)}"></div>
         </div>
       `;
 
@@ -430,4 +635,6 @@ class CADToolManager {
   }
 }
 
-window.CADToolManager = CADToolManager;
+if (typeof window !== 'undefined') {
+  window.CADToolManager = CADToolManager;
+}

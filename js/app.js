@@ -1,6 +1,6 @@
 /**
- * RMA AI Front Elevation Designer - Main Application Controller
- * Connects Canvas Engine, CAD Tools, Framework Generator, Floor Plan Importer,
+ * RMA AI Front Elevation Designer - Main Application Controller V2
+ * Connects Canvas Engine, CAD Tools, Command Line, Framework Generator, Floor Plan Importer,
  * 3D Visualizer, AI Prompt Engine & Renderers, Supabase, Project Manager, and Export Engine.
  */
 
@@ -12,6 +12,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const toolManager = new CADToolManager(cadCanvas);
   window.toolManager = toolManager;
+
+  const commandLine = new CADCommandLine(cadCanvas, toolManager);
+  window.cadCommandLine = commandLine;
 
   const supabaseMgr = new SupabaseManager();
   window.supabaseMgr = supabaseMgr;
@@ -58,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const lighting = document.getElementById('aiLighting').value;
     const landscape = document.getElementById('aiLandscape').value;
     const geoLock = document.getElementById('aiGeometryLock').value;
+    const refMode = document.getElementById('aiRefMode') ? document.getElementById('aiRefMode').value : 'style_materials_colours';
 
     const selectedMaterials = Array.from(document.querySelectorAll('input[name="aiMaterials"]:checked')).map(cb => cb.value);
 
@@ -67,6 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
       lighting,
       landscape,
       geometryLock: geoLock,
+      refMode: refMode,
       hasReferenceImages: refImageManager.images.length > 0
     });
   };
@@ -244,8 +249,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // AI Prompt Auto-Synthesize & Render Buttons
   document.getElementById('btnAutoPrompt').addEventListener('click', updatePromptText);
 
-  ['aiStyle', 'aiLighting', 'aiLandscape', 'aiGeometryLock'].forEach(id => {
-    document.getElementById(id).addEventListener('change', updatePromptText);
+  ['aiStyle', 'aiLighting', 'aiLandscape', 'aiGeometryLock', 'aiRefMode'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', updatePromptText);
   });
 
   document.querySelectorAll('input[name="aiMaterials"]').forEach(cb => {
@@ -257,8 +263,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const style = document.getElementById('aiStyle').value;
     const lighting = document.getElementById('aiLighting').value;
     const landscape = document.getElementById('aiLandscape').value;
+    const geometryLock = document.getElementById('aiGeometryLock').value;
+    const provider = document.getElementById('aiProviderSelect') ? document.getElementById('aiProviderSelect').value : 'client-render';
 
-    await aiRenderEngine.generateRenders(promptText, { style, lighting, landscape });
+    await aiRenderEngine.generateRenders(promptText, {
+      style,
+      lighting,
+      landscape,
+      geometryLock,
+      provider,
+      referenceImages: refImageManager.images
+    });
   });
 
   // 3D View Preset Buttons

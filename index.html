@@ -20,7 +20,7 @@
         <div class="logo-mark">RMA</div>
         <div class="brand-text">
           <span class="brand-title">RMA Design & Construction</span>
-          <span class="brand-subtitle">AI Front Elevation Designer</span>
+          <span class="brand-subtitle">AI Front Elevation Designer V2</span>
         </div>
       </div>
 
@@ -173,7 +173,7 @@
             <button id="btnToggleGrid" class="btn-toggle active" title="Toggle Grid (G)">▦ Grid</button>
             <button id="btnToggleSnap" class="btn-toggle active" title="Toggle Snap-to-Grid (S)">🧲 Grid Snap</button>
             <button id="btnToggleOSnap" class="btn-toggle active" title="Toggle Object Snap">🎯 Object Snap</button>
-            <button id="btnToggleOrtho" class="btn-toggle" title="Ortho Lock Horizontal/Vertical (Shift)">📐 Ortho</button>
+            <button id="btnToggleOrtho" class="btn-toggle" title="Ortho Lock Horizontal/Vertical (F8)">📐 Ortho [F8]</button>
           </div>
 
           <div class="history-controls">
@@ -365,6 +365,18 @@
                   <option value="Luxury">Luxury</option>
                   <option value="Neoclassical">Neoclassical</option>
                   <option value="Industrial">Industrial</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="aiRefMode">Reference Material Mode:</label>
+                <select id="aiRefMode" class="input-select">
+                  <option value="style_materials_colours" selected>Use reference style + materials + colours</option>
+                  <option value="style">Use reference style</option>
+                  <option value="materials">Use reference materials</option>
+                  <option value="colours">Use reference colours</option>
+                  <option value="geometry">Use reference geometry</option>
+                  <option value="all">Use all reference characteristics</option>
                 </select>
               </div>
 
@@ -594,6 +606,7 @@
   <script src="js/cad/geometry.js"></script>
   <script src="js/cad/canvas.js"></script>
   <script src="js/cad/tools.js"></script>
+  <script src="js/cad/commandline.js"></script>
   <script src="js/cad/framework.js"></script>
   <script src="js/cad/floorplan.js"></script>
   <script src="js/3d/visualizer.js"></script>

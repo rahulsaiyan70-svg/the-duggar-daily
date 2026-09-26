@@ -1,7 +1,8 @@
 /**
  * RMA Front Elevation Designer - 2D CAD Canvas Engine
- * Handles viewport transformations (pan, zoom), grid drawing, snapping, object snapping,
- * rendering objects, undo/redo stack, layers, and event propagation.
+ * Handles viewport transformations (pan, zoom), architectural grid, snapping, object snapping (OSNAP),
+ * CAD crosshair cursor, OSNAP visual markers, dynamic input HUD overlay, rendering objects,
+ * undo/redo stack, layers, and event propagation.
  */
 
 class CADCanvas {
@@ -19,7 +20,7 @@ class CADCanvas {
     this.showGrid = true;
     this.snapToGrid = true;
     this.snapToObject = true;
-    this.orthoLock = false; // Lock drawing to 90 degrees horizontal/vertical
+    this.orthoLock = false; // Lock drawing to 90 degrees horizontal/vertical (F8)
 
     // CAD State
     this.objects = [];
@@ -29,11 +30,13 @@ class CADCanvas {
     this.activeTool = 'select';
     this.activeLayer = 'default';
 
-    // Interactive State
+    // Interactive Cursor & Snap State
     this.isPanning = false;
     this.panStart = { x: 0, y: 0 };
+    this.cursorScreen = { x: 0, y: 0 };
     this.cursorWorld = { x: 0, y: 0 };
     this.snappedWorld = { x: 0, y: 0 };
+    this.activeSnapType = null; // 'endpoint', 'midpoint', 'center', 'intersection', 'perpendicular', 'nearest'
 
     // Overlay image (e.g. Floor plan trace)
     this.floorPlanOverlay = null;
@@ -70,23 +73,26 @@ class CADCanvas {
     };
   }
 
-  // Snapping Calculation
+  // Snapping Calculation with Full OSNAP Support
   getSnappedPoint(rawWorldX, rawWorldY) {
     let sx = rawWorldX;
     let sy = rawWorldY;
+    let snapType = null;
 
     // 1. Grid Snapping
     if (this.snapToGrid && this.gridSize > 0) {
       sx = Math.round(rawWorldX / this.gridSize) * this.gridSize;
       sy = Math.round(rawWorldY / this.gridSize) * this.gridSize;
+      snapType = 'grid';
     }
 
-    // 2. Object Point Snapping (Endpoints / Midpoints)
+    // 2. Object Point Snapping (OSNAP)
     if (this.snapToObject) {
-      const snapThresholdWorld = 10 / this.zoom; // 10px snap distance
+      const snapThresholdWorld = 12 / this.zoom; // 12px snap radius
       let closestDist = snapThresholdWorld;
       let objectSnapPt = null;
 
+      // Collect all snap points across objects
       this.objects.forEach(obj => {
         const points = this.getObjectSnapPoints(obj);
         points.forEach(pt => {
@@ -99,29 +105,34 @@ class CADCanvas {
       });
 
       if (objectSnapPt) {
-        return { x: objectSnapPt.x, y: objectSnapPt.y, snappedToObject: true };
+        this.activeSnapType = objectSnapPt.type || 'endpoint';
+        return { x: objectSnapPt.x, y: objectSnapPt.y, snappedToObject: true, snapType: objectSnapPt.type };
       }
     }
 
-    return { x: sx, y: sy, snappedToObject: false };
+    this.activeSnapType = snapType;
+    return { x: sx, y: sy, snappedToObject: false, snapType };
   }
 
   getObjectSnapPoints(obj) {
-    const pts = [];
+    if (obj.getSnapPoints) {
+      return obj.getSnapPoints();
+    }
     const b = obj.getBounds();
-    pts.push({ x: b.minX, y: b.minY });
-    pts.push({ x: b.maxX, y: b.minY });
-    pts.push({ x: b.minX, y: b.maxY });
-    pts.push({ x: b.maxX, y: b.maxY });
-    pts.push({ x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY) / 2 }); // Midpoint
-    return pts;
+    return [
+      { x: b.minX, y: b.minY, type: 'endpoint' },
+      { x: b.maxX, y: b.minY, type: 'endpoint' },
+      { x: b.minX, y: b.maxY, type: 'endpoint' },
+      { x: b.maxX, y: b.maxY, type: 'endpoint' },
+      { x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY) / 2, type: 'midpoint' }
+    ];
   }
 
   // History Undo / Redo
   saveState() {
     const json = this.objects.map(o => JSON.parse(JSON.stringify(o)));
     this.history.push(json);
-    if (this.history.length > 50) this.history.shift(); // Limit to 50 states
+    if (this.history.length > 50) this.history.shift();
     this.redoStack = [];
   }
 
@@ -185,7 +196,6 @@ class CADCanvas {
       const mouseX = e.offsetX;
       const mouseY = e.offsetY;
 
-      // Zoom centered at mouse position
       const worldBefore = this.screenToWorld(mouseX, mouseY);
       this.zoom = Math.max(2, Math.min(200, this.zoom * zoomFactor));
       const worldAfter = this.screenToWorld(mouseX, mouseY);
@@ -193,6 +203,9 @@ class CADCanvas {
       this.panX += (worldAfter.x - worldBefore.x) * this.zoom;
       this.panY -= (worldAfter.y - worldBefore.y) * this.zoom;
       this.render();
+
+      const zoomDisp = document.getElementById('zoomDisplay');
+      if (zoomDisp) zoomDisp.textContent = `${Math.round(this.zoom * 6.66)}%`;
     });
 
     this.canvas.addEventListener('mousedown', (e) => {
@@ -208,6 +221,8 @@ class CADCanvas {
       const sx = e.clientX - rect.left;
       const sy = e.clientY - rect.top;
 
+      this.cursorScreen = { x: sx, y: sy };
+
       if (this.isPanning) {
         this.panX = e.clientX - this.panStart.x;
         this.panY = e.clientY - this.panStart.y;
@@ -218,7 +233,12 @@ class CADCanvas {
       this.cursorWorld = this.screenToWorld(sx, sy);
       this.snappedWorld = this.getSnappedPoint(this.cursorWorld.x, this.cursorWorld.y);
 
-      // Trigger custom mousemove callback if set
+      // Update Coordinate HUD in Status Bar
+      const coordDisplay = document.getElementById('coordDisplay');
+      if (coordDisplay && typeof Units !== 'undefined') {
+        coordDisplay.textContent = `X: ${Units.format(this.snappedWorld.x)} | Y: ${Units.format(this.snappedWorld.y)}`;
+      }
+
       if (this.onMouseMove) this.onMouseMove(e, this.snappedWorld, this.cursorWorld);
 
       this.render();
@@ -227,8 +247,13 @@ class CADCanvas {
     window.addEventListener('mouseup', (e) => {
       if (this.isPanning) {
         this.isPanning = false;
-        this.canvas.style.cursor = this.activeTool === 'pan' ? 'grab' : 'crosshair';
+        this.canvas.style.cursor = 'none'; // Custom CAD Crosshair rendered
       }
+    });
+
+    // Crosshair cursor style
+    this.canvas.addEventListener('mouseenter', () => {
+      this.canvas.style.cursor = 'none';
     });
   }
 
@@ -243,7 +268,7 @@ class CADCanvas {
       this.drawGrid();
     }
 
-    // 2. Draw Floor Plan Trace Overlay if active
+    // 2. Draw Floor Plan Overlay
     if (this.floorPlanOverlay && this.floorPlanOverlay.image) {
       const img = this.floorPlanOverlay.image;
       const sp = this.worldToScreen(this.floorPlanOverlay.x, this.floorPlanOverlay.y + this.floorPlanOverlay.height);
@@ -256,7 +281,7 @@ class CADCanvas {
       this.ctx.restore();
     }
 
-    // 3. Draw Ground Line (Y = 0)
+    // 3. Draw Ground Level Axis (Y = 0)
     const groundP1 = this.worldToScreen(-1000, 0);
     const groundP2 = this.worldToScreen(1000, 0);
     this.ctx.beginPath();
@@ -271,29 +296,20 @@ class CADCanvas {
       obj.draw(this.ctx, this);
     });
 
-    // 5. Draw Active Tool Drawing Preview (if callback defined)
+    // 5. Draw Active Tool Drawing Preview
     if (this.onDrawPreview) {
       this.onDrawPreview(this.ctx, this);
     }
 
-    // 6. Draw Cursor Snap Marker
-    if (this.snappedWorld) {
-      const sc = this.worldToScreen(this.snappedWorld.x, this.snappedWorld.y);
-      this.ctx.beginPath();
-      this.ctx.arc(sc.x, sc.y, 4, 0, Math.PI * 2);
-      this.ctx.fillStyle = this.snappedWorld.snappedToObject ? '#c1121f' : '#2d6a4f';
-      this.ctx.fill();
-      this.ctx.strokeStyle = '#ffffff';
-      this.ctx.lineWidth = 1;
-      this.ctx.stroke();
-    }
+    // 6. Draw OSNAP Markers and CAD Crosshair Cursor
+    this.drawOSNAPMarker();
+    this.drawCrosshair();
   }
 
   drawGrid() {
     const width = this.canvas.width;
     const height = this.canvas.height;
 
-    // Calculate visible world bounds
     const topLeft = this.screenToWorld(0, 0);
     const bottomRight = this.screenToWorld(width, height);
 
@@ -311,7 +327,6 @@ class CADCanvas {
       this.ctx.moveTo(sp.x, 0);
       this.ctx.lineTo(sp.x, height);
 
-      // Major grid line every 10 feet
       if (Math.abs(x) % 10 < 0.01) {
         this.ctx.strokeStyle = '#d8e2dc';
       } else {
@@ -334,6 +349,105 @@ class CADCanvas {
       this.ctx.stroke();
     }
   }
+
+  // Architectural CAD Crosshair Cursor
+  drawCrosshair() {
+    if (this.cursorScreen.x === 0 && this.cursorScreen.y === 0) return;
+    const sc = this.worldToScreen(this.snappedWorld.x, this.snappedWorld.y);
+    const width = this.canvas.width;
+    const height = this.canvas.height;
+
+    this.ctx.save();
+    this.ctx.strokeStyle = 'rgba(43, 147, 72, 0.7)';
+    this.ctx.lineWidth = 1;
+
+    // Horizontal full-screen line
+    this.ctx.beginPath();
+    this.ctx.moveTo(0, sc.y);
+    this.ctx.lineTo(width, sc.y);
+    this.ctx.stroke();
+
+    // Vertical full-screen line
+    this.ctx.beginPath();
+    this.ctx.moveTo(sc.x, 0);
+    this.ctx.lineTo(sc.x, height);
+    this.ctx.stroke();
+
+    // Pickbox Square in center
+    const boxSize = 6;
+    this.ctx.strokeStyle = '#1b4332';
+    this.ctx.strokeRect(sc.x - boxSize / 2, sc.y - boxSize / 2, boxSize, boxSize);
+
+    this.ctx.restore();
+  }
+
+  // OSNAP Visual Marker Glyphs
+  drawOSNAPMarker() {
+    if (!this.snappedWorld || !this.snappedWorld.snappedToObject) return;
+    const sc = this.worldToScreen(this.snappedWorld.x, this.snappedWorld.y);
+    const type = this.snappedWorld.snapType || 'endpoint';
+
+    this.ctx.save();
+    this.ctx.strokeStyle = '#2b9348';
+    this.ctx.fillStyle = 'rgba(43, 147, 72, 0.2)';
+    this.ctx.lineWidth = 2;
+
+    const sz = 7;
+
+    switch (type) {
+      case 'endpoint':
+        // Square
+        this.ctx.fillRect(sc.x - sz, sc.y - sz, sz * 2, sz * 2);
+        this.ctx.strokeRect(sc.x - sz, sc.y - sz, sz * 2, sz * 2);
+        break;
+
+      case 'midpoint':
+        // Triangle
+        this.ctx.beginPath();
+        this.ctx.moveTo(sc.x, sc.y - sz);
+        this.ctx.lineTo(sc.x - sz, sc.y + sz);
+        this.ctx.lineTo(sc.x + sz, sc.y + sz);
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.stroke();
+        break;
+
+      case 'center':
+        // Circle
+        this.ctx.beginPath();
+        this.ctx.arc(sc.x, sc.y, sz, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.stroke();
+        break;
+
+      case 'intersection':
+        // Cross X
+        this.ctx.beginPath();
+        this.ctx.moveTo(sc.x - sz, sc.y - sz); ctx.lineTo(sc.x + sz, sc.y + sz);
+        this.ctx.moveTo(sc.x + sz, sc.y - sz); ctx.lineTo(sc.x - sz, sc.y + sz);
+        this.ctx.stroke();
+        break;
+
+      case 'perpendicular':
+        // Right Angle Glyph
+        this.ctx.beginPath();
+        this.ctx.moveTo(sc.x - sz, sc.y - sz);
+        this.ctx.lineTo(sc.x - sz, sc.y);
+        this.ctx.lineTo(sc.x, sc.y);
+        this.ctx.stroke();
+        break;
+
+      default:
+        this.ctx.beginPath();
+        this.ctx.arc(sc.x, sc.y, 4, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.stroke();
+    }
+
+    this.ctx.restore();
+  }
 }
 
-window.CADCanvas = CADCanvas;
+if (typeof window !== 'undefined') {
+  window.CADCanvas = CADCanvas;
+}
