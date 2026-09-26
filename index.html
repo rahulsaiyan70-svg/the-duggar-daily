@@ -1,60 +1,608 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>RMA Front Elevation Designer</title>
-  <link rel="stylesheet" href="style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RMA AI Front Elevation Designer - Architectural CAD & Generative AI</title>
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- Vendor Dependencies -->
+  <script src="lib/three.min.js"></script>
+  <script src="lib/OrbitControls.js"></script>
+  <script src="lib/jspdf.umd.min.js"></script>
+  <script src="lib/supabase.js"></script>
 </head>
 <body>
-<header>
-  <div><strong>RMA Front Elevation Designer</strong><span>AI Architectural Prototype</span></div>
-  <div class="header-actions"><button id="newBtn">New</button><button id="exportBtn">Export PNG</button></div>
-</header>
+  <div id="app" class="app-container">
+    <!-- Header Navbar -->
+    <header class="app-header">
+      <div class="header-brand">
+        <div class="logo-mark">RMA</div>
+        <div class="brand-text">
+          <span class="brand-title">RMA Design & Construction</span>
+          <span class="brand-subtitle">AI Front Elevation Designer</span>
+        </div>
+      </div>
 
-<div class="app">
-  <aside class="left panel">
-    <h3>DRAWING TOOLS</h3>
-    <div class="tool-grid">
-      <button class="tool active" data-tool="select">↖ Select</button>
-      <button class="tool" data-tool="line">╱ Line</button>
-      <button class="tool" data-tool="rect">□ Wall</button>
-      <button class="tool" data-tool="window">▣ Window</button>
-      <button class="tool" data-tool="door">▯ Door</button>
-      <button class="tool" data-tool="balcony">⌑ Balcony</button>
+      <div class="header-project-info">
+        <input type="text" id="projectNameInput" class="project-title-input" value="Untitled Project" placeholder="Project Name">
+        <span class="project-status-badge" id="projectSaveStatus">Unsaved</span>
+      </div>
+
+      <div class="header-controls">
+        <div class="unit-selector-wrapper">
+          <label for="unitSelect">Units:</label>
+          <select id="unitSelect" class="input-select-sm">
+            <option value="ft-in" selected>Feet & Inches (ft-in)</option>
+            <option value="mm">Millimetres (mm)</option>
+            <option value="cm">Centimetres (cm)</option>
+            <option value="m">Metres (m)</option>
+          </select>
+        </div>
+
+        <button id="btnNewProject" class="btn btn-secondary btn-sm" title="New Project">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          New
+        </button>
+        <button id="btnSaveProject" class="btn btn-secondary btn-sm" title="Save Project">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M17 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+          Save
+        </button>
+        <button id="btnOpenExport" class="btn btn-secondary btn-sm" title="Export Elevation">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+          Export
+        </button>
+        <button id="btnOpenSettings" class="btn btn-icon-only btn-sm" title="Settings & API Configuration">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+        </button>
+        <button id="btnOpenAuth" class="btn btn-primary btn-sm">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+          <span id="authUserLabel">Sign In</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="workspace">
+      <!-- Left Toolbar (18 Architectural CAD Tools) -->
+      <aside class="cad-toolbar">
+        <div class="toolbar-section-title">TOOLS</div>
+        <div class="tool-group">
+          <button class="tool-btn active" data-tool="select" title="Select / Move / Modify (V)">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M7 2l12 11.2-5.8.5 3.3 7.3-2.2 1-3.2-7.4L7 18.5V2z"/></svg>
+            <span>Select</span>
+          </button>
+          <button class="tool-btn" data-tool="pan" title="Pan Canvas (H)">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M23 5.5V11h-2V7.41l-3.29 3.29-1.41-1.41L19.59 6H16V4h5.5c.28 0 .5.22.5.5zM1 18.5V13h2v3.59l3.29-3.29 1.41 1.41L4.41 18H8v2H2.5c-.28 0-.5-.22-.5-.5zM23 18.5c0 .28-.22.5-.5.5H17v-2h3.59l-3.29-3.29 1.41-1.41L22 15.59V12h2v6.5zM1 5.5c0-.28.22-.5.5-.5H8v2H4.41l3.29 3.29-1.41 1.41L3 8.41V12H1V5.5z"/></svg>
+            <span>Pan</span>
+          </button>
+          <button class="tool-btn" data-tool="zoom" title="Zoom In / Out (Z)">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+            <span>Zoom</span>
+          </button>
+        </div>
+
+        <div class="toolbar-section-title">2D DRAFTING</div>
+        <div class="tool-group">
+          <button class="tool-btn" data-tool="line" title="Line (L)">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M3.5 18.5l17-13 1 1.3-17 13z"/></svg>
+            <span>Line</span>
+          </button>
+          <button class="tool-btn" data-tool="polyline" title="Polyline (P)">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M3 17l6-8 5 5 7-10 1.5 1L14 16l-5-5-5 7z"/></svg>
+            <span>Polyline</span>
+          </button>
+          <button class="tool-btn" data-tool="rectangle" title="Rectangle (R)">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M3 5v14h18V5H3zm16 12H5V7h14v10z"/></svg>
+            <span>Rectangle</span>
+          </button>
+          <button class="tool-btn" data-tool="arc" title="Arc (A)">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M19 19C19 12.92 14.08 8 8 8V6c7.18 0 13 5.82 13 13h-2z"/></svg>
+            <span>Arc</span>
+          </button>
+          <button class="tool-btn" data-tool="circle" title="Circle (C)">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
+            <span>Circle</span>
+          </button>
+        </div>
+
+        <div class="toolbar-section-title">ARCHITECTURAL</div>
+        <div class="tool-group">
+          <button class="tool-btn" data-tool="wall" title="Wall Boundary (W)">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M19 4H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H5V6h14v12zM7 8h10v2H7zm0 4h10v2H7z"/></svg>
+            <span>Wall</span>
+          </button>
+          <button class="tool-btn" data-tool="window" title="Window Component">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 8h-6V5h6v6zm-8-6v6H5V5h6zm-6 8h6v6H5v-6zm8 6v-6h6v6h-6z"/></svg>
+            <span>Window</span>
+          </button>
+          <button class="tool-btn" data-tool="door" title="Door Component">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v16h18V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-4-8c0-.55-.45-1-1-1s-1 .45-1 1 .45 1 1 1 1-.45 1-1z"/></svg>
+            <span>Door</span>
+          </button>
+          <button class="tool-btn" data-tool="balcony" title="Balcony & Railing">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M4 10h16v2H4zm0 4h16v2H4zm-1 4h18v2H3zm2-14h2v6H5zm5 0h2v6h-2zm5 0h2v6h-2zm5 0h2v6h-2z"/></svg>
+            <span>Balcony</span>
+          </button>
+          <button class="tool-btn" data-tool="column" title="Column / Pillar">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M7 2h10v3H7zm1 4h8v12H8zm-1 13h10v3H7z"/></svg>
+            <span>Column</span>
+          </button>
+          <button class="tool-btn" data-tool="slab" title="Floor Slab Projection">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M3 10h18v4H3z"/></svg>
+            <span>Slab</span>
+          </button>
+          <button class="tool-btn" data-tool="parapet" title="Parapet Wall">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M3 8h18v8H3zm2 2v4h14v-4H5z"/></svg>
+            <span>Parapet</span>
+          </button>
+          <button class="tool-btn" data-tool="stair" title="Stairway Profile">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M19 3H16v4h-3v4h-3v4H7v4H3v2h6v-4h3v-4h3V7h4z"/></svg>
+            <span>Stair</span>
+          </button>
+        </div>
+
+        <div class="toolbar-section-title">ANNOTATE & EDIT</div>
+        <div class="tool-group">
+          <button class="tool-btn" data-tool="dimension" title="Dimension Line (D)">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M21 6H3c-.55 0-1 .45-1 1v2c0 .55.45 1 1 1h18c.55 0 1-.45 1-1V7c0-.55-.45-1-1-1zm-10 8h2v4h-2zm-6 0h2v4H5zm12 0h2v4h-2z"/></svg>
+            <span>Dimension</span>
+          </button>
+          <button class="tool-btn" data-tool="text" title="Text Label (T)">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M5 4v3h5.5v12h3V7H19V4z"/></svg>
+            <span>Text</span>
+          </button>
+          <button class="tool-btn" data-tool="eraser" title="Eraser / Delete (E)">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M15.14 3C14.63 3 14.12 3.2 13.73 3.59L2.59 14.73c-.78.78-.78 2.05 0 2.83L6.44 21.4c.39.39.9.59 1.41.59H19v-2h-6.17l8.48-8.48c.78-.78.78-2.05 0-2.83l-3.56-3.55C17.36 3.2 16.85 3 16.34 3h-1.2z"/></svg>
+            <span>Eraser</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main Viewport Area -->
+      <main class="main-viewport">
+        <!-- Viewport Top Options Bar -->
+        <div class="viewport-options-bar">
+          <div class="view-mode-tabs">
+            <button id="tab2D" class="view-tab active">2D CAD Elevation</button>
+            <button id="tab3D" class="view-tab">3D Interactive Model</button>
+            <button id="tabSplit" class="view-tab">Split View</button>
+          </div>
+
+          <div class="snapping-controls">
+            <button id="btnToggleGrid" class="btn-toggle active" title="Toggle Grid (G)">▦ Grid</button>
+            <button id="btnToggleSnap" class="btn-toggle active" title="Toggle Snap-to-Grid (S)">🧲 Grid Snap</button>
+            <button id="btnToggleOSnap" class="btn-toggle active" title="Toggle Object Snap">🎯 Object Snap</button>
+            <button id="btnToggleOrtho" class="btn-toggle" title="Ortho Lock Horizontal/Vertical (Shift)">📐 Ortho</button>
+          </div>
+
+          <div class="history-controls">
+            <button id="btnUndo" class="btn-icon" title="Undo (Ctrl+Z)">↶ Undo</button>
+            <button id="btnRedo" class="btn-icon" title="Redo (Ctrl+Y)">↷ Redo</button>
+            <button id="btnDeleteSelected" class="btn-icon btn-danger-sm" title="Delete Selected (Del)">🗑️ Delete</button>
+            <button id="btnClearCanvas" class="btn-icon btn-danger-sm" title="Clear All Canvas Geometry">Clear All</button>
+          </div>
+        </div>
+
+        <!-- Viewport Canvas Container -->
+        <div id="canvasViewport" class="canvas-viewport">
+          <!-- 2D Canvas -->
+          <canvas id="elevationCanvas"></canvas>
+
+          <!-- 3D Canvas Container -->
+          <div id="threeContainer" class="three-container hidden">
+            <div class="three-controls-overlay">
+              <span class="three-title">3D Elevation View</span>
+              <div class="three-preset-btns">
+                <button id="btn3DFront" class="btn btn-secondary btn-xs">Front View</button>
+                <button id="btn3DSide" class="btn btn-secondary btn-xs">Side View</button>
+                <button id="btn3DPerspective" class="btn btn-secondary btn-xs">Perspective</button>
+                <button id="btn3DReset" class="btn btn-secondary btn-xs">Reset Camera</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Viewport Status Bar -->
+        <div class="viewport-status-bar">
+          <div class="status-item">
+            <span class="status-label">Cursor:</span>
+            <span id="coordDisplay">X: 0' 0" | Y: 0' 0"</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Tool:</span>
+            <span id="activeToolDisplay">Select</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Selection:</span>
+            <span id="selectionDisplay">0 objects selected</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Zoom:</span>
+            <span id="zoomDisplay">100%</span>
+          </div>
+        </div>
+      </main>
+
+      <!-- Right Control Panel -->
+      <aside class="right-panel">
+        <div class="panel-accordion">
+          <!-- 1. Building Framework Generator -->
+          <details class="accordion-item" open>
+            <summary class="accordion-header">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/></svg>
+              <span>1. Building Framework</span>
+            </summary>
+            <div class="accordion-content">
+              <p class="section-desc">Generate standard CAD parametric storey framework automatically.</p>
+              <div class="form-grid-2col">
+                <div class="form-group">
+                  <label for="fwWidth">Building Width:</label>
+                  <div class="input-with-unit">
+                    <input type="number" id="fwWidth" value="40" step="0.5" min="10">
+                    <span class="unit-label">ft</span>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="fwPlinth">Plinth Height:</label>
+                  <div class="input-with-unit">
+                    <input type="number" id="fwPlinth" value="2" step="0.5" min="0">
+                    <span class="unit-label">ft</span>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="fwGround">Ground Floor:</label>
+                  <div class="input-with-unit">
+                    <input type="number" id="fwGround" value="10" step="0.5" min="6">
+                    <span class="unit-label">ft</span>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="fwFirst">First Floor:</label>
+                  <div class="input-with-unit">
+                    <input type="number" id="fwFirst" value="10" step="0.5" min="0">
+                    <span class="unit-label">ft</span>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="fwSecond">Second Floor:</label>
+                  <div class="input-with-unit">
+                    <input type="number" id="fwSecond" value="0" step="0.5" min="0">
+                    <span class="unit-label">ft</span>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="fwParapet">Parapet Height:</label>
+                  <div class="input-with-unit">
+                    <input type="number" id="fwParapet" value="4" step="0.5" min="0">
+                    <span class="unit-label">ft</span>
+                  </div>
+                </div>
+              </div>
+              <button id="btnCreateFramework" class="btn btn-primary btn-full mt-2">
+                CREATE ELEVATION FRAMEWORK
+              </button>
+            </div>
+          </details>
+
+          <!-- 2. Object Properties Inspector -->
+          <details class="accordion-item" open id="inspectorAccordion">
+            <summary class="accordion-header">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+              <span>2. Object Properties</span>
+            </summary>
+            <div class="accordion-content" id="inspectorContent">
+              <p class="empty-inspector-msg">Select an object on the canvas to inspect & edit architectural parameters.</p>
+            </div>
+          </details>
+
+          <!-- 3. Floor Plan Import & Overlay -->
+          <details class="accordion-item">
+            <summary class="accordion-header">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
+              <span>3. Floor Plan Import</span>
+            </summary>
+            <div class="accordion-content">
+              <p class="section-desc">Upload ground / first floor plan (JPG, PNG, PDF) to align and trace facade openings.</p>
+              <div class="file-upload-area">
+                <input type="file" id="floorPlanFileInput" accept="image/jpeg,image/png,image/webp,application/pdf">
+                <label for="floorPlanFileInput" class="file-upload-label">
+                  <svg class="icon-lg" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+                  <span>Click to upload Floor Plan</span>
+                  <span class="file-hint">JPG, PNG, WebP or PDF</span>
+                </label>
+              </div>
+              <div id="floorPlanControls" class="floorplan-controls hidden">
+                <div class="form-group">
+                  <label for="fpOpacity">Overlay Opacity:</label>
+                  <input type="range" id="fpOpacity" min="0.1" max="1" step="0.05" value="0.5">
+                </div>
+                <div class="btn-group-2col">
+                  <button id="btnCalibrateFP" class="btn btn-secondary btn-sm">Scale Calibration (2 Pts)</button>
+                  <button id="btnRemoveFP" class="btn btn-danger-sm btn-sm">Remove Plan</button>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <!-- 4. Reference Facade Images -->
+          <details class="accordion-item">
+            <summary class="accordion-header">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+              <span>4. Reference Facade Images</span>
+            </summary>
+            <div class="accordion-content">
+              <p class="section-desc">Upload reference facade photos to guide AI material, colour palette, and style.</p>
+              <div class="file-upload-area">
+                <input type="file" id="refImageFileInput" accept="image/jpeg,image/png,image/webp" multiple>
+                <label for="refImageFileInput" class="file-upload-label">
+                  <svg class="icon-lg" viewBox="0 0 24 24"><path d="M19 7v2.99s-1.99.01-2 0V7h-3s.01-1.99 0-2h3V2h2v3h3v2h-3zm-3 4V8h-3V5H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-8h-3zM5 19l3-3.86 2.14 2.58 3-3.86L17 19H5z"/></svg>
+                  <span>Upload Facade References</span>
+                  <span class="file-hint">JPG, PNG, WebP (Multiple allowed)</span>
+                </label>
+              </div>
+              <div id="refImageList" class="ref-image-grid">
+                <!-- Reference images dynamically rendered here -->
+              </div>
+            </div>
+          </details>
+
+          <!-- 5. AI Design Controls & System -->
+          <details class="accordion-item" open>
+            <summary class="accordion-header">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M12 2L9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2z"/></svg>
+              <span>5. AI Facade Designer</span>
+            </summary>
+            <div class="accordion-content">
+              <div class="form-group">
+                <label for="aiStyle">Architectural Style:</label>
+                <select id="aiStyle" class="input-select">
+                  <option value="Modern" selected>Modern</option>
+                  <option value="Contemporary">Contemporary</option>
+                  <option value="Indian Contemporary">Indian Contemporary</option>
+                  <option value="Traditional">Traditional</option>
+                  <option value="Minimal">Minimal</option>
+                  <option value="Luxury">Luxury</option>
+                  <option value="Neoclassical">Neoclassical</option>
+                  <option value="Industrial">Industrial</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>Materials & Cladding:</label>
+                <div class="checkbox-grid">
+                  <label><input type="checkbox" name="aiMaterials" value="White plaster" checked> White Plaster</label>
+                  <label><input type="checkbox" name="aiMaterials" value="Natural stone" checked> Stone</label>
+                  <label><input type="checkbox" name="aiMaterials" value="Exposed brick"> Brick</label>
+                  <label><input type="checkbox" name="aiMaterials" value="Wood louvers & fins" checked> Wood Fins</label>
+                  <label><input type="checkbox" name="aiMaterials" value="Metal paneling"> Metal</label>
+                  <label><input type="checkbox" name="aiMaterials" value="Glass railing" checked> Glass</label>
+                  <label><input type="checkbox" name="aiMaterials" value="Textured paint"> Textured Paint</label>
+                  <label><input type="checkbox" name="aiMaterials" value="Board-formed concrete"> Concrete</label>
+                </div>
+              </div>
+
+              <div class="form-grid-2col">
+                <div class="form-group">
+                  <label for="aiLighting">Lighting:</label>
+                  <select id="aiLighting" class="input-select">
+                    <option value="Warm architectural lighting" selected>Warm Architectural</option>
+                    <option value="Daylight clear sky">Day</option>
+                    <option value="Golden hour evening">Evening</option>
+                    <option value="Night dramatics">Night</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="aiLandscape">Landscape:</label>
+                  <select id="aiLandscape" class="input-select">
+                    <option value="Basic entry planter" selected>Basic</option>
+                    <option value="Detailed lush garden">Detailed</option>
+                    <option value="None">None</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group highlight-box">
+                <div class="flex-between">
+                  <label for="aiGeometryLock" class="strong">Geometry Preservation:</label>
+                  <span id="geoLockBadge" class="badge badge-success">HIGH (Recommended)</span>
+                </div>
+                <select id="aiGeometryLock" class="input-select mt-1">
+                  <option value="LOW">LOW (Creative structural freedom)</option>
+                  <option value="MEDIUM">MEDIUM (Moderate geometry match)</option>
+                  <option value="HIGH" selected>HIGH (Strict CAD opening alignment)</option>
+                  <option value="LOCKED">LOCKED (Absolute CAD geometry lock)</option>
+                </select>
+                <p class="hint-text mt-1">Preserves building width, floor levels, doors, windows, balconies, slabs and parapet while AI renders materials & lighting.</p>
+              </div>
+
+              <div class="form-group">
+                <div class="flex-between">
+                  <label for="aiPromptText">Constructed AI Prompt:</label>
+                  <button id="btnAutoPrompt" class="btn-link-sm">Auto Synthesize</button>
+                </div>
+                <textarea id="aiPromptText" rows="4" class="input-textarea"></textarea>
+              </div>
+
+              <button id="btnRenderAI" class="btn btn-primary btn-full btn-lg">
+                <svg class="icon-lg" viewBox="0 0 24 24"><path d="M12 2L9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2z"/></svg>
+                RENDER 4 DESIGN OPTIONS
+              </button>
+            </div>
+          </details>
+
+          <!-- 6. AI Render Results Gallery -->
+          <details class="accordion-item" open id="galleryAccordion">
+            <summary class="accordion-header">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M4 4h7v7H4zm10 0h7v7h-7zM4 14h7v7H4zm10 0h7v7h-7z"/></svg>
+              <span>6. Render Gallery</span>
+            </summary>
+            <div class="accordion-content">
+              <div id="renderStatusMessage" class="render-status-box hidden">
+                <div class="spinner"></div>
+                <span id="renderStatusText">Generating photorealistic facade renders...</span>
+              </div>
+
+              <div id="designGalleryGrid" class="design-gallery-grid">
+                <!-- Option 1 through 4 cards dynamically generated -->
+                <p class="empty-gallery-msg">Click "RENDER 4 DESIGN OPTIONS" to generate photorealistic architectural facade proposals.</p>
+              </div>
+            </div>
+          </details>
+        </div>
+      </aside>
     </div>
-    <button id="gridBtn" class="wide">▦ Grid / Snap</button>
-    <button id="undoBtn" class="wide">↶ Undo</button>
+  </div>
 
-    <h3>BUILDING DATA</h3>
-    <label>Building width (ft)<input id="width" type="number" value="40"></label>
-    <label>Ground floor (ft)<input id="ground" type="number" value="10"></label>
-    <label>First floor (ft)<input id="first" type="number" value="10"></label>
-    <label>Parapet (ft)<input id="parapet" type="number" value="4"></label>
-    <button id="framework" class="primary wide">Create Elevation Framework</button>
+  <!-- MODALS -->
 
-    <h3>PROJECT</h3>
-    <button id="saveBtn" class="wide">Save Project JSON</button>
-  </aside>
+  <!-- Settings / Config Modal -->
+  <div id="settingsModal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Application & API Settings</h3>
+        <button class="btn-close" data-close-modal="settingsModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-section">
+          <h4>AI Image Rendering Service</h4>
+          <p class="section-desc">Configure your API provider for live remote diffusion rendering or serverless proxy.</p>
+          <div class="form-group">
+            <label for="aiProviderSelect">AI Provider / Serverless Endpoint:</label>
+            <select id="aiProviderSelect" class="input-select">
+              <option value="client-render" selected>Built-in Photorealistic Renderer Engine (No API key needed)</option>
+              <option value="custom-api">Custom Serverless API Proxy (/api/render)</option>
+              <option value="openai">OpenAI DALL-E 3 API</option>
+              <option value="stability">Stability AI / SDXL API</option>
+            </select>
+          </div>
+          <div id="customApiKeyGroup" class="form-group hidden">
+            <label for="userApiKeyInput">API Key (Stored locally in browser):</label>
+            <input type="password" id="userApiKeyInput" class="input-text" placeholder="sk-...">
+            <p class="hint-text">Your API key is never transmitted anywhere except directly to your configured provider.</p>
+          </div>
+        </div>
 
-  <main id="canvasArea">
-    <canvas id="elevationCanvas"></canvas>
-    <div id="status">Select a tool and draw on the elevation canvas.</div>
-  </main>
+        <div class="settings-section">
+          <h4>Supabase Project Database & Auth</h4>
+          <p class="section-desc">Connect Supabase for persistent cloud storage and authentication across devices.</p>
+          <div class="form-group">
+            <label for="sbUrlInput">Supabase URL:</label>
+            <input type="text" id="sbUrlInput" class="input-text" placeholder="https://your-project.supabase.co">
+          </div>
+          <div class="form-group">
+            <label for="sbKeyInput">Supabase Anon Key:</label>
+            <input type="password" id="sbKeyInput" class="input-text" placeholder="eyJhbGciOiJKV1Qi...">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btnSaveSettings" class="btn btn-primary">Save Settings</button>
+        <button class="btn btn-secondary" data-close-modal="settingsModal">Cancel</button>
+      </div>
+    </div>
+  </div>
 
-  <aside class="right panel">
-    <h3>REFERENCE ELEVATION</h3>
-    <input id="reference" type="file" accept="image/*">
-    <div id="referencePreview" class="reference-preview">Upload a reference image</div>
+  <!-- Auth Modal -->
+  <div id="authModal" class="modal-backdrop hidden">
+    <div class="modal-card modal-card-sm">
+      <div class="modal-header">
+        <h3 id="authModalTitle">Sign In</h3>
+        <button class="btn-close" data-close-modal="authModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="authAlert" class="alert alert-error hidden"></div>
+        <form id="authForm">
+          <div class="form-group">
+            <label for="authEmail">Email Address:</label>
+            <input type="email" id="authEmail" class="input-text" required placeholder="architect@example.com">
+          </div>
+          <div class="form-group">
+            <label for="authPassword">Password:</label>
+            <input type="password" id="authPassword" class="input-text" required placeholder="••••••••">
+          </div>
+          <button type="submit" id="btnSubmitAuth" class="btn btn-primary btn-full mt-2">Sign In</button>
+        </form>
+        <div class="auth-toggle-links mt-2 text-center">
+          <button id="btnToggleAuthMode" class="btn-link">Don't have an account? Sign Up</button>
+          <br>
+          <button id="btnResetPassword" class="btn-link-sm mt-1">Forgot Password?</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-    <h3>AI FACADE DESIGN</h3>
-    <textarea id="prompt">Modern contemporary Indian residential facade. Preserve the exact building width, floor heights, doors, windows and balcony positions from my elevation. Use white plaster, natural stone cladding, wood-look vertical fins, glass railing and warm architectural lighting. Photorealistic architectural visualization.</textarea>
-    <button id="aiBtn" class="primary wide">Prepare AI Render</button>
+  <!-- Export Modal -->
+  <div id="exportModal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Export Elevation Drawing</h3>
+        <button class="btn-close" data-close-modal="exportModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="exportClientName">Client / Project Name:</label>
+          <input type="text" id="exportClientName" class="input-text" value="Client Residence Project">
+        </div>
+        <div class="form-group">
+          <label for="exportScaleText">Drawing Scale Tag:</label>
+          <input type="text" id="exportScaleText" class="input-text" value='1/4" = 1`-0" (1:50)'>
+        </div>
+        <div class="export-options-grid mt-2">
+          <button id="btnExportPNG" class="export-type-card">
+            <span class="export-icon">🖼️</span>
+            <strong>Export High-Res PNG</strong>
+            <span>Includes RMA Title Block</span>
+          </button>
+          <button id="btnExportJPG" class="export-type-card">
+            <span class="export-icon">📷</span>
+            <strong>Export JPG Image</strong>
+            <span>Standard Image Format</span>
+          </button>
+          <button id="btnExportPDF" class="export-type-card">
+            <span class="export-icon">📄</span>
+            <strong>Export Architectural PDF</strong>
+            <span>Vector/Raster Drawing Sheet with Title Block</span>
+          </button>
+          <button id="btnExportDXF" class="export-type-card">
+            <span class="export-icon">📐</span>
+            <strong>Export Vector DXF (CAD)</strong>
+            <span>Authentic AutoCAD DXF Entities</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-    <h3>AI REQUEST</h3>
-    <pre id="aiOutput">Waiting for your elevation...</pre>
-  </aside>
-</div>
-<script src="script.js"></script>
+  <!-- Compare Modal -->
+  <div id="compareModal" class="modal-backdrop hidden">
+    <div class="modal-card modal-card-lg">
+      <div class="modal-header">
+        <h3>Compare Design Renders</h3>
+        <button class="btn-close" data-close-modal="compareModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="compareGrid" class="compare-grid">
+          <!-- Dynamically populated comparison images -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Application Scripts -->
+  <script src="js/units.js"></script>
+  <script src="js/cad/geometry.js"></script>
+  <script src="js/cad/canvas.js"></script>
+  <script src="js/cad/tools.js"></script>
+  <script src="js/cad/framework.js"></script>
+  <script src="js/cad/floorplan.js"></script>
+  <script src="js/3d/visualizer.js"></script>
+  <script src="js/ai/prompt.js"></script>
+  <script src="js/ai/references.js"></script>
+  <script src="js/ai/render.js"></script>
+  <script src="js/supabase/client.js"></script>
+  <script src="js/projects.js"></script>
+  <script src="js/export.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
