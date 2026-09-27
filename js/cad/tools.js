@@ -21,6 +21,15 @@ class CADToolManager {
     this.offsetState = null; // 'WAITING_FOR_DISTANCE', 'SELECT_OBJECT', 'SELECT_SIDE'
     this.offsetSourceObject = null;
 
+    // Persistent EXTEND State
+    this.extendState = null; // 'SELECT_BOUNDARIES', 'SELECT_LINE_TO_EXTEND'
+    this.extendBoundaries = [];
+
+    // Window / Crossing Selection State
+    this.isSelectionBox = false;
+    this.selectionStartPt = null;
+    this.selectionCurrentPt = null;
+
     // Dynamic Input Overlay Elements
     this.dynamicInputContainer = null;
     this.createDynamicInputDOM();
@@ -397,6 +406,14 @@ class CADToolManager {
     this.drawingPoints = [];
     this.offsetState = null;
     this.offsetSourceObject = null;
+    this.extendState = null;
+    if (this.extendBoundaries) {
+      this.extendBoundaries.forEach(b => b.selected = false);
+    }
+    this.extendBoundaries = [];
+    this.isSelectionBox = false;
+    this.selectionStartPt = null;
+    this.selectionCurrentPt = null;
     this.hideDynamicInput();
     this.cad.onDrawPreview = null;
     if (window.cadCommandLine) {
@@ -450,6 +467,13 @@ class CADToolManager {
       if (window.cadCommandLine) {
         window.cadCommandLine.startCommand('OFFSET', `Specify offset distance or <${formattedDist}>:`);
         window.cadCommandLine.setActiveBadge(`OFFSET (${formattedDist})`);
+      }
+    } else if (toolName === 'extend') {
+      this.extendState = 'SELECT_BOUNDARIES';
+      this.extendBoundaries = [];
+      if (window.cadCommandLine) {
+        window.cadCommandLine.startCommand('EXTEND', 'EXTEND — Select boundary edges or <Press ENTER for all>:');
+        window.cadCommandLine.setActiveBadge('EXTEND');
       }
     } else if (window.cadCommandLine) {
       if (toolName && !['select', 'pan', 'zoom'].includes(toolName)) {
@@ -555,6 +579,38 @@ class CADToolManager {
         return;
       }
 
+      if (this.isSelectionBox && this.selectionStartPt) {
+        this.selectionCurrentPt = { ...snappedPt };
+        const p1 = this.selectionStartPt;
+        const p2 = this.selectionCurrentPt;
+        const dx = p2.x - p1.x;
+
+        this.cad.onDrawPreview = (ctx, viewport) => {
+          const sp1 = viewport.worldToScreen(Math.min(p1.x, p2.x), Math.max(p1.y, p2.y));
+          const sw = Math.abs(p2.x - p1.x) * viewport.zoom;
+          const sh = Math.abs(p2.y - p1.y) * viewport.zoom;
+
+          ctx.save();
+          if (dx >= 0) {
+            ctx.fillStyle = 'rgba(59, 130, 246, 0.15)';
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([]);
+          } else {
+            ctx.fillStyle = 'rgba(34, 197, 94, 0.15)';
+            ctx.strokeStyle = '#16a34a';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 4]);
+          }
+
+          ctx.fillRect(sp1.x, sp1.y, sw, sh);
+          ctx.strokeRect(sp1.x, sp1.y, sw, sh);
+          ctx.restore();
+        };
+        this.cad.render();
+        return;
+      }
+
       if (this.cad.activeTool === 'offset' && this.offsetSourceObject && this.offsetState === 'SELECT_SIDE') {
         const previewObjs = this.offsetSourceObject.offset(this.lastOffsetDistance, snappedPt);
         this.cad.onDrawPreview = (ctx, viewport) => {
@@ -609,7 +665,13 @@ class CADToolManager {
           this.cad.saveState();
           this.draggedObject = null;
         }
-        // NO MOUSEUP DRAWING FINISH! Interactions are strictly click-based like AutoCAD.
+        if (this.isSelectionBox && this.selectionStartPt && this.selectionCurrentPt) {
+          const dx = Math.abs(this.selectionCurrentPt.x - this.selectionStartPt.x);
+          const dy = Math.abs(this.selectionCurrentPt.y - this.selectionStartPt.y);
+          if (dx > 0.2 || dy > 0.2) {
+            this.commitBoxSelection();
+          }
+        }
       });
     }
 
@@ -618,6 +680,45 @@ class CADToolManager {
         this.finishPolyline();
       }
     });
+  }
+
+  commitBoxSelection() {
+    if (!this.isSelectionBox || !this.selectionStartPt || !this.selectionCurrentPt) return;
+
+    const box = {
+      x1: this.selectionStartPt.x,
+      y1: this.selectionStartPt.y,
+      x2: this.selectionCurrentPt.x,
+      y2: this.selectionCurrentPt.y
+    };
+
+    const dx = box.x2 - box.x1;
+    const dy = box.y2 - box.y1;
+
+    if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
+      const isWindowSelection = dx >= 0;
+      const selected = this.cad.objects.filter(o => {
+        return isWindowSelection
+          ? GeometryUtils.isObjectCompletelyInsideBox(o, box)
+          : GeometryUtils.isObjectInsideOrIntersectingBox(o, box);
+      });
+
+      this.cad.objects.forEach(o => o.selected = selected.includes(o));
+      this.cad.selectedObjects = selected;
+
+      const modeLabel = isWindowSelection ? 'Window selection' : 'Crossing selection';
+      if (window.cadCommandLine) {
+        window.cadCommandLine.logMessage(`${selected.length} objects selected (${modeLabel}).`);
+      }
+      this.updateSelectionDisplay();
+      this.renderInspector();
+    }
+
+    this.isSelectionBox = false;
+    this.selectionStartPt = null;
+    this.selectionCurrentPt = null;
+    this.cad.onDrawPreview = null;
+    this.cad.render();
   }
 
   handleSelectMouseDown(pt, isShift) {
@@ -640,14 +741,21 @@ class CADToolManager {
       this.draggedObject = hitObj;
       const b = hitObj.getBounds();
       this.dragOffset = { x: pt.x - b.minX, y: pt.y - b.minY };
-    } else if (!isShift) {
-      this.cad.objects.forEach(o => o.selected = false);
+      this.cad.selectedObjects = this.cad.objects.filter(o => o.selected);
+      this.updateSelectionDisplay();
+      this.renderInspector();
+      this.cad.render();
+    } else if (!this.isSelectionBox) {
+      this.isSelectionBox = true;
+      this.selectionStartPt = { ...pt };
+      this.selectionCurrentPt = { ...pt };
+      if (!isShift) {
+        this.cad.objects.forEach(o => o.selected = false);
+        this.cad.selectedObjects = [];
+      }
+    } else {
+      this.commitBoxSelection();
     }
-
-    this.cad.selectedObjects = this.cad.objects.filter(o => o.selected);
-    this.updateSelectionDisplay();
-    this.renderInspector();
-    this.cad.render();
   }
 
   handleEraserClick(pt) {
@@ -667,6 +775,84 @@ class CADToolManager {
 
   handleToolMouseDown(pt, e) {
     const tool = this.cad.activeTool;
+
+    if (tool === 'extend') {
+      if (this.extendState === 'SELECT_BOUNDARIES') {
+        let hitObj = null;
+        for (let i = this.cad.objects.length - 1; i >= 0; i--) {
+          if (this.cad.objects[i].hitTest(pt.x, pt.y)) {
+            hitObj = this.cad.objects[i];
+            break;
+          }
+        }
+        if (hitObj) {
+          if (!this.extendBoundaries.includes(hitObj)) {
+            this.extendBoundaries.push(hitObj);
+            hitObj.selected = true;
+            this.cad.render();
+            if (window.cadCommandLine) {
+              window.cadCommandLine.logMessage(`Boundary object added (${this.extendBoundaries.length} total). Press ENTER when done selecting boundaries.`);
+            }
+          }
+        } else {
+          this.extendState = 'SELECT_LINE_TO_EXTEND';
+          if (window.cadCommandLine) {
+            window.cadCommandLine.setPrompt('EXTEND — Select object to extend:');
+          }
+        }
+      } else if (this.extendState === 'SELECT_LINE_TO_EXTEND') {
+        let hitLine = null;
+        for (let i = this.cad.objects.length - 1; i >= 0; i--) {
+          if (this.cad.objects[i].type === 'line' && this.cad.objects[i].hitTest(pt.x, pt.y)) {
+            hitLine = this.cad.objects[i];
+            break;
+          }
+        }
+
+        if (hitLine) {
+          const d1 = GeometryUtils.distance(pt, { x: hitLine.x1, y: hitLine.y1 });
+          const d2 = GeometryUtils.distance(pt, { x: hitLine.x2, y: hitLine.y2 });
+
+          let fixedPt, extendEndPt, isP1;
+          if (d1 < d2) {
+            fixedPt = { x: hitLine.x2, y: hitLine.y2 };
+            extendEndPt = { x: hitLine.x1, y: hitLine.y1 };
+            isP1 = true;
+          } else {
+            fixedPt = { x: hitLine.x1, y: hitLine.y1 };
+            extendEndPt = { x: hitLine.x2, y: hitLine.y2 };
+            isP1 = false;
+          }
+
+          const boundaries = this.extendBoundaries.length > 0
+            ? this.extendBoundaries
+            : this.cad.objects.filter(o => o !== hitLine);
+
+          const intersections = GeometryUtils.findRayObjectIntersections(fixedPt, extendEndPt, boundaries);
+
+          if (intersections.length > 0) {
+            this.cad.saveState();
+            const target = intersections[0];
+            if (isP1) {
+              hitLine.x1 = target.x;
+              hitLine.y1 = target.y;
+            } else {
+              hitLine.x2 = target.x;
+              hitLine.y2 = target.y;
+            }
+            this.cad.render();
+            if (window.cadCommandLine) {
+              window.cadCommandLine.logMessage('Line extended to boundary.');
+            }
+          } else if (window.cadCommandLine) {
+            window.cadCommandLine.logMessage('No valid boundary intersection found in extension direction.');
+          }
+        } else if (window.cadCommandLine) {
+          window.cadCommandLine.logMessage('Select a valid line to extend.');
+        }
+      }
+      return;
+    }
 
     if (tool === 'offset') {
       if (this.offsetState === 'SELECT_OBJECT' || !this.offsetSourceObject) {

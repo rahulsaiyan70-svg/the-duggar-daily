@@ -31,6 +31,7 @@ class CADCommandLine {
       'O': 'OFFSET',
       'TR': 'TRIM',
       'EX': 'EXTEND',
+      'EXTEND': 'EXTEND',
       'F': 'FILLET',
       'S': 'STRETCH',
       'SC': 'SCALE',
@@ -414,6 +415,10 @@ class CADCommandLine {
         this.tools.setTool('offset');
         break;
 
+      case 'EXTEND':
+        this.tools.setTool('extend');
+        break;
+
       case 'ERASE':
         this.cad.deleteSelected();
         this.logMessage('Selected objects erased.');
@@ -490,6 +495,18 @@ class CADCommandLine {
 
   handleCommandStep(inputStr) {
     const cmd = this.activeCommandState.command;
+
+    if (cmd === 'EXTEND') {
+      if (this.tools.extendState === 'SELECT_BOUNDARIES') {
+        this.tools.extendState = 'SELECT_LINE_TO_EXTEND';
+        this.setPrompt('EXTEND — Select object to extend:');
+        this.logMessage('All objects selected as boundaries.');
+      } else {
+        this.cancelCommand();
+      }
+      this.activeCommandState = null;
+      return;
+    }
 
     if (cmd === 'OFFSET') {
       let dist = 0;

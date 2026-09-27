@@ -267,6 +267,66 @@ assert.strictEqual(mockCad.objects.length, 5); // Offset geometry remains intact
 
 console.log("-> PASS: Command suggestions work, OFFSET repeats continuously across multiple objects with distance memory, and ESC exits cleanly.\n");
 
+
+// --- TEST 6: EXTEND COMMAND & WINDOW VS CROSSING SELECTION ---
+console.log("Test 6: EXTEND Command & Window vs. Crossing Selection");
+
+mockCad.objects = []; // Reset canvas
+
+// 1. Boundary Line at Y=10 (from x=0 to x=20)
+const boundaryLine = new CADLine(0, 10, 20, 10);
+mockCad.addObject(boundaryLine);
+
+// 2. Target Line to extend: x=5, from y=0 to y=5
+const lineToExtend = new CADLine(5, 0, 5, 5);
+mockCad.addObject(lineToExtend);
+
+// Activate EXTEND command
+toolMgr.setTool('extend');
+assert.strictEqual(toolMgr.extendState, 'SELECT_BOUNDARIES');
+
+// Press Enter to select all as boundaries
+cmdLine.handleCommandStep('');
+assert.strictEqual(toolMgr.extendState, 'SELECT_LINE_TO_EXTEND');
+
+// Click near top endpoint (5, 4.8) of target line
+toolMgr.handleToolMouseDown({ x: 5, y: 4.8 }, { button: 0 });
+
+// Verify line extends to (5, 10)
+assert.strictEqual(lineToExtend.x1, 5);
+assert.strictEqual(lineToExtend.y1, 0);
+assert.strictEqual(lineToExtend.x2, 5);
+assert.strictEqual(lineToExtend.y2, 10);
+console.log("-> PASS: EXTEND correctly calculated ray-intersection and extended line to Y=10 boundary.");
+
+// Test Window vs. Crossing Selection
+mockCad.objects = [];
+const fullyInsideLine = new CADLine(2, 2, 8, 8); // Entirely in box 0,0 to 10,10
+const straddlingLine = new CADLine(5, 5, 15, 5);  // Crosses x=10 boundary
+mockCad.addObject(fullyInsideLine);
+mockCad.addObject(straddlingLine);
+
+// Window Selection: Left to Right (x1=0, x2=10)
+toolMgr.setTool('select');
+toolMgr.isSelectionBox = true;
+toolMgr.selectionStartPt = { x: 0, y: 0 };
+toolMgr.selectionCurrentPt = { x: 10, y: 10 };
+toolMgr.commitBoxSelection();
+
+assert.strictEqual(mockCad.selectedObjects.length, 1);
+assert.strictEqual(mockCad.selectedObjects[0], fullyInsideLine);
+console.log("-> PASS: Window Selection (Left-to-Right) selects ONLY 100% enclosed objects.");
+
+// Crossing Selection: Right to Left (x1=10, x2=0)
+toolMgr.setTool('select');
+toolMgr.isSelectionBox = true;
+toolMgr.selectionStartPt = { x: 10, y: 10 };
+toolMgr.selectionCurrentPt = { x: 0, y: 0 };
+toolMgr.commitBoxSelection();
+
+assert.strictEqual(mockCad.selectedObjects.length, 2);
+console.log("-> PASS: Crossing Selection (Right-to-Left) selects BOTH enclosed and intersecting objects.\n");
+
 console.log('====================================================');
 console.log('ALL AUTOCAD CLICK INTERACTION TESTS PASSED 100%!');
 console.log('====================================================');

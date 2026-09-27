@@ -132,6 +132,146 @@ class GeometryUtils {
       t: t
     };
   }
+
+  static lineLineIntersection(p1, p2, p3, p4) {
+    const dx1 = p2.x - p1.x;
+    const dy1 = p2.y - p1.y;
+    const dx2 = p4.x - p3.x;
+    const dy2 = p4.y - p3.y;
+
+    const denom = dx1 * dy2 - dy1 * dx2;
+    if (Math.abs(denom) < 1e-9) return null;
+
+    const t = ((p3.x - p1.x) * dy2 - (p3.y - p1.y) * dx2) / denom;
+    const u = ((p3.x - p1.x) * dy1 - (p3.y - p1.y) * dx1) / denom;
+
+    return {
+      x: p1.x + t * dx1,
+      y: p1.y + t * dy1,
+      t: t,
+      u: u
+    };
+  }
+
+  static segmentSegmentIntersection(p1, p2, p3, p4) {
+    const res = GeometryUtils.lineLineIntersection(p1, p2, p3, p4);
+    if (!res) return null;
+    if (res.t >= -1e-6 && res.t <= 1 + 1e-6 && res.u >= -1e-6 && res.u <= 1 + 1e-6) {
+      return { x: res.x, y: res.y };
+    }
+    return null;
+  }
+
+  static getObjectSegments(obj) {
+    if (obj.type === 'line') {
+      return [{ p1: { x: obj.x1, y: obj.y1 }, p2: { x: obj.x2, y: obj.y2 } }];
+    } else if (obj.type === 'polyline') {
+      const segs = [];
+      for (let i = 0; i < obj.points.length - 1; i++) {
+        segs.push({ p1: obj.points[i], p2: obj.points[i + 1] });
+      }
+      return segs;
+    } else if (['rectangle', 'wall', 'window', 'door', 'balcony', 'column', 'slab', 'parapet', 'stair'].includes(obj.type)) {
+      const minX = Math.min(obj.x, obj.x + (obj.width || 0));
+      const maxX = Math.max(obj.x, obj.x + (obj.width || 0));
+      const minY = Math.min(obj.y, obj.y + (obj.height || 0));
+      const maxY = Math.max(obj.y, obj.y + (obj.height || 0));
+
+      const p1 = { x: minX, y: minY };
+      const p2 = { x: maxX, y: minY };
+      const p3 = { x: maxX, y: maxY };
+      const p4 = { x: minX, y: maxY };
+
+      return [
+        { p1: p1, p2: p2 },
+        { p1: p2, p2: p3 },
+        { p1: p3, p2: p4 },
+        { p1: p4, p2: p1 }
+      ];
+    } else if (obj.type === 'circle' || obj.type === 'arc') {
+      const segs = [];
+      const numSegs = 32;
+      const radius = obj.radius || 1;
+      const cx = obj.cx || 0;
+      const cy = obj.cy || 0;
+      const startAngle = obj.startAngle || 0;
+      const endAngle = obj.endAngle || (Math.PI * 2);
+      const angleSpan = endAngle - startAngle;
+
+      for (let i = 0; i < numSegs; i++) {
+        const a1 = startAngle + (angleSpan / numSegs) * i;
+        const a2 = startAngle + (angleSpan / numSegs) * (i + 1);
+        segs.push({
+          p1: { x: cx + radius * Math.cos(a1), y: cy + radius * Math.sin(a1) },
+          p2: { x: cx + radius * Math.cos(a2), y: cy + radius * Math.sin(a2) }
+        });
+      }
+      return segs;
+    }
+    return [];
+  }
+
+  static findRayObjectIntersections(fixedPt, extendEndPt, boundaryObjs) {
+    const intersections = [];
+
+    boundaryObjs.forEach(boundary => {
+      const segs = GeometryUtils.getObjectSegments(boundary);
+      segs.forEach(seg => {
+        const res = GeometryUtils.lineLineIntersection(fixedPt, extendEndPt, seg.p1, seg.p2);
+        if (res) {
+          if (res.t >= 1.0001 && res.u >= -1e-6 && res.u <= 1 + 1e-6) {
+            const dist = GeometryUtils.distance(extendEndPt, { x: res.x, y: res.y });
+            intersections.push({ x: res.x, y: res.y, dist: dist, t: res.t });
+          }
+        }
+      });
+    });
+
+    intersections.sort((a, b) => a.dist - b.dist);
+    return intersections;
+  }
+
+  static isObjectCompletelyInsideBox(obj, box) {
+    const minX = Math.min(box.x1, box.x2);
+    const maxX = Math.max(box.x1, box.x2);
+    const minY = Math.min(box.y1, box.y2);
+    const maxY = Math.max(box.y1, box.y2);
+
+    const b = obj.getBounds();
+    return b.minX >= minX && b.maxX <= maxX && b.minY >= minY && b.maxY <= maxY;
+  }
+
+  static isObjectInsideOrIntersectingBox(obj, box) {
+    const minX = Math.min(box.x1, box.x2);
+    const maxX = Math.max(box.x1, box.x2);
+    const minY = Math.min(box.y1, box.y2);
+    const maxY = Math.max(box.y1, box.y2);
+
+    if (GeometryUtils.isObjectCompletelyInsideBox(obj, box)) return true;
+
+    const boxSegs = [
+      { p1: { x: minX, y: minY }, p2: { x: maxX, y: minY } },
+      { p1: { x: maxX, y: minY }, p2: { x: maxX, y: maxY } },
+      { p1: { x: maxX, y: maxY }, p2: { x: minX, y: maxY } },
+      { p1: { x: minX, y: maxY }, p2: { x: minX, y: minY } }
+    ];
+
+    const objSegs = GeometryUtils.getObjectSegments(obj);
+    for (const oSeg of objSegs) {
+      for (const bSeg of boxSegs) {
+        if (GeometryUtils.segmentSegmentIntersection(oSeg.p1, oSeg.p2, bSeg.p1, bSeg.p2)) {
+          return true;
+        }
+      }
+    }
+
+    const center = { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+    if (obj.hitTest && obj.hitTest(center.x, center.y, Math.max(maxX - minX, maxY - minY) / 2)) {
+      return true;
+    }
+
+    return false;
+  }
 }
 
 // CAD Primitives
