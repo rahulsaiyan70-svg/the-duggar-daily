@@ -63,6 +63,8 @@ class CADCommandLine {
       container.id = 'cadCommandLine';
       container.className = 'cad-command-line';
       container.innerHTML = `
+        <div id="cmdActiveBadge" class="cmd-active-badge hidden">ACTIVE COMMAND: <span id="cmdActiveName">NONE</span></div>
+        <div id="cmdSuggestionBox" class="cmd-suggestion-box hidden"></div>
         <div id="cmdHistoryLog" class="cmd-history-log">
           <div class="cmd-log-line">RMA Architectural CAD Engine V2.0 initialized. Type command or shortcut.</div>
         </div>
@@ -79,6 +81,11 @@ class CADCommandLine {
     this.containerEl = container;
     this.historyLogEl = document.getElementById('cmdHistoryLog');
     this.inputEl = document.getElementById('cmdInputField');
+    this.suggestionBoxEl = document.getElementById('cmdSuggestionBox');
+    this.activeBadgeEl = document.getElementById('cmdActiveBadge');
+    this.activeNameEl = document.getElementById('cmdActiveName');
+    this.selectedSuggestionIndex = -1;
+    this.filteredSuggestions = [];
   }
 
   logMessage(msg) {
@@ -96,43 +103,195 @@ class CADCommandLine {
     if (label) label.textContent = promptText;
   }
 
+  updateSuggestions(query) {
+    if (!this.suggestionBoxEl) return;
+    const q = query.trim().toUpperCase();
+    if (!q) {
+      this.hideSuggestions();
+      return;
+    }
+
+    const availableCommands = [
+      { name: 'OFFSET', shortcut: 'O, OF' },
+      { name: 'LINE', shortcut: 'L' },
+      { name: 'POLYLINE', shortcut: 'PL' },
+      { name: 'RECTANGLE', shortcut: 'REC, RECTANG' },
+      { name: 'CIRCLE', shortcut: 'C' },
+      { name: 'ARC', shortcut: 'A' },
+      { name: 'MOVE', shortcut: 'M, MO' },
+      { name: 'COPY', shortcut: 'CO' },
+      { name: 'ROTATE', shortcut: 'RO' },
+      { name: 'MIRROR', shortcut: 'MI' },
+      { name: 'TRIM', shortcut: 'TR' },
+      { name: 'EXTEND', shortcut: 'EX' },
+      { name: 'FILLET', shortcut: 'F' },
+      { name: 'STRETCH', shortcut: 'S' },
+      { name: 'SCALE', shortcut: 'SC' },
+      { name: 'ERASE', shortcut: 'E' },
+      { name: 'EXPLODE', shortcut: 'X' },
+      { name: 'DIMENSION', shortcut: 'D, DIM' },
+      { name: 'TEXT', shortcut: 'T, MT' },
+      { name: 'ZOOM', shortcut: 'Z' },
+      { name: 'PAN', shortcut: 'P' },
+      { name: 'UNDO', shortcut: 'U' },
+      { name: 'REDO', shortcut: 'REDO' },
+      { name: 'WALL', shortcut: 'WALL' },
+      { name: 'WINDOW', shortcut: 'WIN' },
+      { name: 'DOOR', shortcut: 'DOOR' },
+      { name: 'BALCONY', shortcut: 'BAL' }
+    ];
+
+    this.filteredSuggestions = availableCommands.filter(cmd => {
+      const shortcuts = cmd.shortcut.split(',').map(s => s.trim());
+      return cmd.name.startsWith(q) || shortcuts.some(s => s.startsWith(q));
+    });
+
+    if (this.filteredSuggestions.length === 0) {
+      this.hideSuggestions();
+      return;
+    }
+
+    this.selectedSuggestionIndex = 0;
+    this.renderSuggestions();
+  }
+
+  renderSuggestions() {
+    if (!this.suggestionBoxEl) return;
+
+    this.suggestionBoxEl.innerHTML = this.filteredSuggestions.map((item, idx) => `
+      <div class="cmd-suggestion-item ${idx === this.selectedSuggestionIndex ? 'selected' : ''}" data-cmd="${item.name}">
+        <span class="cmd-sug-name">${item.name}</span>
+        <span class="cmd-sug-shortcut">${item.shortcut}</span>
+      </div>
+    `).join('');
+
+    this.suggestionBoxEl.classList.remove('hidden');
+
+    Array.from(this.suggestionBoxEl.querySelectorAll('.cmd-suggestion-item')).forEach((el, idx) => {
+      el.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        const cmdName = el.getAttribute('data-cmd');
+        if (cmdName) {
+          if (this.inputEl) this.inputEl.value = '';
+          this.hideSuggestions();
+          this.processInput(cmdName);
+        }
+      });
+    });
+  }
+
+  hideSuggestions() {
+    if (this.suggestionBoxEl) {
+      this.suggestionBoxEl.classList.add('hidden');
+      this.suggestionBoxEl.innerHTML = '';
+    }
+    this.filteredSuggestions = [];
+    this.selectedSuggestionIndex = -1;
+  }
+
+  setActiveBadge(cmdName) {
+    if (!this.activeBadgeEl || !this.activeNameEl) return;
+    if (cmdName) {
+      this.activeNameEl.textContent = cmdName.toUpperCase();
+      this.activeBadgeEl.classList.remove('hidden');
+    } else {
+      this.activeBadgeEl.classList.add('hidden');
+    }
+  }
+
   initEvents() {
     if (!this.inputEl) return;
 
+    this.inputEl.addEventListener('input', (e) => {
+      this.updateSuggestions(this.inputEl.value);
+    });
+
     this.inputEl.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
+      const isSuggestionsVisible = this.filteredSuggestions.length > 0;
+
+      if (e.key === 'ArrowUp') {
         e.preventDefault();
-        const val = this.inputEl.value.trim();
-        this.inputEl.value = '';
-        if (val) {
-          this.commandHistory.push(val);
-          this.historyIndex = this.commandHistory.length;
-          this.processInput(val);
-        } else if (this.activeCommandState) {
-          this.cancelCommand();
-        }
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        if (this.historyIndex > 0) {
+        if (isSuggestionsVisible) {
+          this.selectedSuggestionIndex = (this.selectedSuggestionIndex - 1 + this.filteredSuggestions.length) % this.filteredSuggestions.length;
+          this.renderSuggestions();
+        } else if (this.historyIndex > 0) {
           this.historyIndex--;
           this.inputEl.value = this.commandHistory[this.historyIndex];
         }
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
-        if (this.historyIndex < this.commandHistory.length - 1) {
+        if (isSuggestionsVisible) {
+          this.selectedSuggestionIndex = (this.selectedSuggestionIndex + 1) % this.filteredSuggestions.length;
+          this.renderSuggestions();
+        } else if (this.historyIndex < this.commandHistory.length - 1) {
           this.historyIndex++;
           this.inputEl.value = this.commandHistory[this.historyIndex];
         } else {
           this.historyIndex = this.commandHistory.length;
           this.inputEl.value = '';
         }
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        let cmdToRun = '';
+        if (isSuggestionsVisible && this.selectedSuggestionIndex >= 0) {
+          cmdToRun = this.filteredSuggestions[this.selectedSuggestionIndex].name;
+        } else {
+          cmdToRun = this.inputEl.value.trim();
+        }
+
+        this.inputEl.value = '';
+        this.hideSuggestions();
+
+        if (cmdToRun) {
+          this.commandHistory.push(cmdToRun);
+          this.historyIndex = this.commandHistory.length;
+          this.processInput(cmdToRun);
+        } else if (this.activeCommandState) {
+          this.cancelCommand();
+        }
+      } else if (e.key === 'Tab') {
+        if (isSuggestionsVisible && this.selectedSuggestionIndex >= 0) {
+          e.preventDefault();
+          this.inputEl.value = this.filteredSuggestions[this.selectedSuggestionIndex].name;
+          this.hideSuggestions();
+        }
       } else if (e.key === 'Escape') {
+        this.hideSuggestions();
         this.cancelCommand();
       }
     });
 
     if (typeof window !== 'undefined') {
       window.addEventListener('keydown', (e) => {
+        // Global Ctrl+Z / Ctrl+Y undo/redo shortcut handling
+        if ((e.ctrlKey || e.metaKey) && !e.altKey) {
+          const isTextInput = e.target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName);
+
+          if (e.key.toLowerCase() === 'z') {
+            if (isTextInput && !e.target.classList.contains('cmd-input-field')) {
+              // Allow browser native text undo when focused inside user text inputs
+              return;
+            }
+            e.preventDefault();
+            if (e.shiftKey) {
+              if (this.cad) this.cad.redo();
+              this.logMessage('Redo executed.');
+            } else {
+              if (this.cad) this.cad.undo();
+              this.logMessage('Undo executed.');
+            }
+            return;
+          } else if (e.key.toLowerCase() === 'y') {
+            if (isTextInput && !e.target.classList.contains('cmd-input-field')) {
+              return;
+            }
+            e.preventDefault();
+            if (this.cad) this.cad.redo();
+            this.logMessage('Redo executed.');
+            return;
+          }
+        }
+
         if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
 
         if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
@@ -252,7 +411,7 @@ class CADCommandLine {
         break;
 
       case 'OFFSET':
-        this.startCommand('OFFSET', 'Specify offset distance (e.g. 9" or 1.5):');
+        this.tools.setTool('offset');
         break;
 
       case 'ERASE':
@@ -333,18 +492,23 @@ class CADCommandLine {
     const cmd = this.activeCommandState.command;
 
     if (cmd === 'OFFSET') {
-      const dist = typeof Units !== 'undefined' ? Units.toFeet(inputStr) : parseFloat(inputStr);
-      if (dist > 0 && this.cad.selectedObjects.length > 0) {
-        this.cad.saveState();
-        const offObjs = [];
-        this.cad.selectedObjects.forEach(o => {
-          if (o.offset) offObjs.push(...o.offset(dist, { x: o.getBounds().maxX + 5, y: o.getBounds().maxY + 5 }));
-        });
-        offObjs.forEach(no => this.cad.addObject(no));
-        const formattedDist = typeof Units !== 'undefined' ? Units.format(dist) : `${dist}'`;
-        this.logMessage(`Offset by ${formattedDist} applied.`);
+      let dist = 0;
+      if (!inputStr.trim()) {
+        dist = this.tools.lastOffsetDistance || 0.75;
+      } else {
+        dist = typeof Units !== 'undefined' ? Units.toFeet(inputStr) : parseFloat(inputStr);
       }
-      this.cancelCommand();
+      if (dist > 0) {
+        this.tools.lastOffsetDistance = dist;
+        this.tools.setOffsetState('SELECT_OBJECT');
+        const formattedDist = typeof Units !== 'undefined' ? Units.format(dist) : `${dist}'`;
+        this.logMessage(`Offset distance set to ${formattedDist}`);
+      } else {
+        this.logMessage('Invalid distance entered.');
+        this.cancelCommand();
+      }
+      this.activeCommandState = null;
+      return;
     } else if (cmd === 'ROTATE') {
       const deg = parseFloat(inputStr);
       if (!isNaN(deg) && this.cad.selectedObjects.length > 0) {

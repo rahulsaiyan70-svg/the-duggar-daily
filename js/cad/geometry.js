@@ -365,6 +365,24 @@ class CADRect extends CADObject {
     this.y = mc.y - this.height / 2;
   }
 
+  offset(distance, sidePt) {
+    const minX = Math.min(this.x, this.x + this.width);
+    const maxX = Math.max(this.x, this.x + this.width);
+    const minY = Math.min(this.y, this.y + this.height);
+    const maxY = Math.max(this.y, this.y + this.height);
+
+    const isInside = sidePt.x >= minX && sidePt.x <= maxX && sidePt.y >= minY && sidePt.y <= maxY;
+    const sign = isInside ? -1 : 1;
+
+    const nx = minX - sign * distance;
+    const ny = minY - sign * distance;
+    const nw = (maxX - minX) + 2 * sign * distance;
+    const nh = (maxY - minY) + 2 * sign * distance;
+
+    if (nw <= 0 || nh <= 0) return [];
+    return [new CADRect(nx, ny, nw, nh, this.type)];
+  }
+
   explode() {
     const x1 = this.x, y1 = this.y, x2 = this.x + this.width, y2 = this.y + this.height;
     return [
@@ -442,6 +460,14 @@ class CADCircle extends CADObject {
     const mc = GeometryUtils.mirrorPoint({ x: this.cx, y: this.cy }, p1, p2);
     this.cx = mc.x;
     this.cy = mc.y;
+  }
+
+  offset(distance, sidePt) {
+    const distToCenter = GeometryUtils.distance({ x: this.cx, y: this.cy }, sidePt);
+    const isOutside = distToCenter >= this.radius;
+    const newRadius = isOutside ? (this.radius + distance) : (this.radius - distance);
+    if (newRadius <= 0) return [];
+    return [new CADCircle(this.cx, this.cy, newRadius)];
   }
 
   getArea() {

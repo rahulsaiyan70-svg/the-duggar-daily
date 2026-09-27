@@ -16,12 +16,34 @@ class CADToolManager {
     this.dragOffset = { x: 0, y: 0 };
     this.currentToolMode = null;
 
+    // Persistent OFFSET State
+    this.lastOffsetDistance = 0.75; // Default 9 inches (0.75 ft)
+    this.offsetState = null; // 'WAITING_FOR_DISTANCE', 'SELECT_OBJECT', 'SELECT_SIDE'
+    this.offsetSourceObject = null;
+
     // Dynamic Input Overlay Elements
     this.dynamicInputContainer = null;
     this.createDynamicInputDOM();
 
     this.initCanvasListeners();
     this.initKeyboardShortcuts();
+  }
+
+  setOffsetState(state) {
+    this.offsetState = state;
+    if (state === 'SELECT_OBJECT') {
+      this.offsetSourceObject = null;
+      this.cad.onDrawPreview = null;
+      if (window.cadCommandLine) {
+        const distStr = typeof Units !== 'undefined' ? Units.format(this.lastOffsetDistance) : `${this.lastOffsetDistance}'`;
+        window.cadCommandLine.setPrompt(`OFFSET — Select object to offset [Distance = ${distStr}]:`);
+        window.cadCommandLine.setActiveBadge(`OFFSET (${distStr})`);
+      }
+    } else if (state === 'SELECT_SIDE') {
+      if (window.cadCommandLine) {
+        window.cadCommandLine.setPrompt('OFFSET — Specify point on side to offset:');
+      }
+    }
   }
 
   createDynamicInputDOM() {
@@ -319,9 +341,14 @@ class CADToolManager {
             const wStr = typeof Units !== 'undefined' ? Units.format(widthFeet) : `${widthFeet}'`;
             const hStr = typeof Units !== 'undefined' ? Units.format(heightFeet) : `${heightFeet}'`;
             window.cadCommandLine.logMessage(`${tool.toUpperCase()} created: ${wStr} x ${hStr}`);
+            window.cadCommandLine.setPrompt(`Specify first corner of next ${tool}:`);
           }
         }
-        this.cancelDrawing();
+        this.isDrawing = false;
+        this.startPt = null;
+        this.currentPt = null;
+        this.hideDynamicInput();
+        this.cad.onDrawPreview = null;
       }
     } else if (tool === 'circle') {
       const rInput = document.getElementById('dynRadiusInput');
@@ -331,8 +358,13 @@ class CADToolManager {
         if (window.cadCommandLine) {
           const rStr = typeof Units !== 'undefined' ? Units.format(radiusFeet) : `${radiusFeet}'`;
           window.cadCommandLine.logMessage(`CIRCLE created: Radius = ${rStr}`);
+          window.cadCommandLine.setPrompt('Specify center point of next circle:');
         }
-        this.cancelDrawing();
+        this.isDrawing = false;
+        this.startPt = null;
+        this.currentPt = null;
+        this.hideDynamicInput();
+        this.cad.onDrawPreview = null;
       }
     } else if (tool === 'arc') {
       const rInput = document.getElementById('dynRadiusInput');
@@ -342,8 +374,13 @@ class CADToolManager {
         if (window.cadCommandLine) {
           const rStr = typeof Units !== 'undefined' ? Units.format(radiusFeet) : `${radiusFeet}'`;
           window.cadCommandLine.logMessage(`ARC created: Radius = ${rStr}`);
+          window.cadCommandLine.setPrompt('Specify start point of next arc:');
         }
-        this.cancelDrawing();
+        this.isDrawing = false;
+        this.startPt = null;
+        this.currentPt = null;
+        this.hideDynamicInput();
+        this.cad.onDrawPreview = null;
       }
     }
   }
@@ -358,10 +395,13 @@ class CADToolManager {
     this.startPt = null;
     this.currentPt = null;
     this.drawingPoints = [];
+    this.offsetState = null;
+    this.offsetSourceObject = null;
     this.hideDynamicInput();
     this.cad.onDrawPreview = null;
     if (window.cadCommandLine) {
       window.cadCommandLine.setPrompt('Command:');
+      window.cadCommandLine.setActiveBadge(null);
     }
     this.cad.render();
   }
@@ -395,11 +435,29 @@ class CADToolManager {
     this.startPt = null;
     this.currentPt = null;
     this.drawingPoints = [];
+    this.offsetState = null;
+    this.offsetSourceObject = null;
     this.cad.onDrawPreview = null;
     this.hideDynamicInput();
 
     const activeDisplay = typeof document !== 'undefined' ? document.getElementById('activeToolDisplay') : null;
     if (activeDisplay) activeDisplay.textContent = toolName.toUpperCase();
+
+    if (toolName === 'offset') {
+      const distVal = this.lastOffsetDistance || 0.75;
+      const formattedDist = typeof Units !== 'undefined' ? Units.format(distVal) : `${distVal}'`;
+      this.offsetState = 'WAITING_FOR_DISTANCE';
+      if (window.cadCommandLine) {
+        window.cadCommandLine.startCommand('OFFSET', `Specify offset distance or <${formattedDist}>:`);
+        window.cadCommandLine.setActiveBadge(`OFFSET (${formattedDist})`);
+      }
+    } else if (window.cadCommandLine) {
+      if (toolName && !['select', 'pan', 'zoom'].includes(toolName)) {
+        window.cadCommandLine.setActiveBadge(toolName);
+      } else {
+        window.cadCommandLine.setActiveBadge(null);
+      }
+    }
 
     this.cad.render();
   }
@@ -494,6 +552,21 @@ class CADToolManager {
         const dy = snappedPt.y - this.dragOffset.y - this.draggedObject.getBounds().minY;
         this.draggedObject.move(dx, dy);
         this.updateInspectorValues(this.draggedObject);
+        return;
+      }
+
+      if (this.cad.activeTool === 'offset' && this.offsetSourceObject && this.offsetState === 'SELECT_SIDE') {
+        const previewObjs = this.offsetSourceObject.offset(this.lastOffsetDistance, snappedPt);
+        this.cad.onDrawPreview = (ctx, viewport) => {
+          if (!previewObjs || !previewObjs.length) return;
+          ctx.save();
+          ctx.strokeStyle = '#2b9348';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([4, 4]);
+          previewObjs.forEach(po => po.draw(ctx, viewport));
+          ctx.restore();
+        };
+        this.cad.render();
         return;
       }
 
@@ -594,6 +667,36 @@ class CADToolManager {
 
   handleToolMouseDown(pt, e) {
     const tool = this.cad.activeTool;
+
+    if (tool === 'offset') {
+      if (this.offsetState === 'SELECT_OBJECT' || !this.offsetSourceObject) {
+        let hitObj = null;
+        for (let i = this.cad.objects.length - 1; i >= 0; i--) {
+          if (this.cad.objects[i].hitTest(pt.x, pt.y)) {
+            hitObj = this.cad.objects[i];
+            break;
+          }
+        }
+        if (hitObj) {
+          this.offsetSourceObject = hitObj;
+          this.setOffsetState('SELECT_SIDE');
+        } else if (window.cadCommandLine) {
+          window.cadCommandLine.logMessage('No object selected. Click directly on a line or shape to offset.');
+        }
+      } else if (this.offsetState === 'SELECT_SIDE' && this.offsetSourceObject) {
+        const newObjs = this.offsetSourceObject.offset(this.lastOffsetDistance, pt);
+        if (newObjs && newObjs.length > 0) {
+          newObjs.forEach(no => this.cad.addObject(no));
+          const formattedDist = typeof Units !== 'undefined' ? Units.format(this.lastOffsetDistance) : `${this.lastOffsetDistance}'`;
+          if (window.cadCommandLine) {
+            window.cadCommandLine.logMessage(`Offset created: ${formattedDist}`);
+          }
+        }
+        // Repeat OFFSET command for next object
+        this.setOffsetState('SELECT_OBJECT');
+      }
+      return;
+    }
 
     if (tool === 'text') {
       const textVal = typeof window !== 'undefined' && window.prompt ? prompt('Enter Architectural Text Label:', 'Window W1') : 'Label';

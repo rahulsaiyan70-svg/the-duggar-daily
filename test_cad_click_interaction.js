@@ -74,13 +74,25 @@ Object.defineProperty(mockDynContainer, 'innerHTML', {
   }
 });
 
+const registeredElements = {};
+
+function createOrGetMockElement(id, tag = 'div') {
+  if (registeredElements[id]) return registeredElements[id];
+  const el = new MockElement(id, tag);
+  registeredElements[id] = el;
+  return el;
+}
+
 global.document = {
   createElement: (tag) => new MockElement('', tag),
   getElementById: (id) => {
+    if (registeredElements[id]) return registeredElements[id];
     if (id === 'canvasViewport') return mockViewport;
     if (id === 'elevationCanvas') return mockCanvasEl;
     if (id === 'dynamicInputContainer') return mockDynContainer;
-    return mockDynContainer.children.find(c => c.id === id) || null;
+    const foundInDyn = mockDynContainer.children.find(c => c.id === id);
+    if (foundInDyn) return foundInDyn;
+    return createOrGetMockElement(id);
   },
   activeElement: null
 };
@@ -153,7 +165,7 @@ console.log("Test 2: RECTANGLE - Click corner, Width = 12', Height = 8', Enter")
 toolMgr.setTool('rectangle');
 
 // Mouse click 1: Fix FIRST CORNER
-toolMgr.handleToolMouseDown({ x: 0, y: 0 }, { button: 0 });
+toolMgr.handleToolMouseDown({ x: 20, y: 20 }, { button: 0 });
 assert.strictEqual(toolMgr.isDrawing, true);
 
 const wInput = document.getElementById('dynWidthInput');
@@ -177,7 +189,7 @@ console.log("-> PASS: Exact 12' x 8' rectangle created on single click + keyboar
 console.log("Test 3: CIRCLE - Click center, Radius = 3', Enter");
 toolMgr.setTool('circle');
 
-toolMgr.handleToolMouseDown({ x: 5, y: 5 }, { button: 0 });
+toolMgr.handleToolMouseDown({ x: 50, y: 50 }, { button: 0 });
 assert.strictEqual(toolMgr.isDrawing, true);
 
 const rInput = document.getElementById('dynRadiusInput');
@@ -188,10 +200,10 @@ toolMgr.applyDynamicInput();
 
 const circle = mockCad.objects.find(o => o.type === 'circle');
 assert(circle);
-assert.strictEqual(circle.cx, 5);
-assert.strictEqual(circle.cy, 5);
+assert.strictEqual(circle.cx, 50);
+assert.strictEqual(circle.cy, 50);
 assert.strictEqual(circle.radius, 3);
-console.log("-> PASS: Circle radius 3 ft created accurately at (5,5).\n");
+console.log("-> PASS: Circle radius 3 ft created accurately at (50,50).\n");
 
 
 // --- TEST 4: POLYLINE & ESC CANCEL ---
@@ -205,6 +217,55 @@ toolMgr.cancelDrawing();
 assert.strictEqual(toolMgr.isDrawing, false);
 assert.strictEqual(mockCad.objects.length, 3); // Line, Rectangle, Circle remain intact
 console.log("-> PASS: ESC cancels current polyline without deleting previously committed geometry.\n");
+
+
+// --- TEST 5: COMMAND SUGGESTIONS & PERSISTENT REPEAT OFFSET ---
+console.log("Test 5: Command Suggestions & Persistent Repeat OFFSET");
+
+// Test Suggestions
+cmdLine.updateSuggestions('OF');
+assert.strictEqual(cmdLine.filteredSuggestions.length, 1);
+assert.strictEqual(cmdLine.filteredSuggestions[0].name, 'OFFSET');
+
+cmdLine.updateSuggestions('CO');
+assert.strictEqual(cmdLine.filteredSuggestions[0].name, 'COPY');
+
+// Start OFFSET
+toolMgr.setTool('offset');
+assert.strictEqual(toolMgr.offsetState, 'WAITING_FOR_DISTANCE');
+
+// Enter 9" distance
+cmdLine.handleCommandStep('9"');
+assert.strictEqual(toolMgr.lastOffsetDistance, 0.75);
+assert.strictEqual(toolMgr.offsetState, 'SELECT_OBJECT');
+
+// Select Line 1 (x1=0, y1=0, x2=5, y2=0)
+const line1 = mockCad.objects[0];
+toolMgr.handleToolMouseDown({ x: 2.5, y: 0 }, { button: 0 });
+assert.strictEqual(toolMgr.offsetSourceObject, line1);
+assert.strictEqual(toolMgr.offsetState, 'SELECT_SIDE');
+
+// Click side (y = 2) to commit offset of Line 1
+toolMgr.handleToolMouseDown({ x: 2.5, y: 2 }, { button: 0 });
+assert.strictEqual(mockCad.objects.length, 4); // Line 1 offset created!
+assert.strictEqual(toolMgr.offsetState, 'SELECT_OBJECT'); // Continuous repeat mode remains ACTIVE!
+
+// Select Rectangle (Line 2 equivalent)
+const rectObj = mockCad.objects.find(o => o.type === 'rectangle');
+toolMgr.handleToolMouseDown({ x: 25, y: 25 }, { button: 0 });
+assert.strictEqual(toolMgr.offsetSourceObject, rectObj);
+
+// Click side outside to commit offset of Rectangle
+toolMgr.handleToolMouseDown({ x: -2, y: -2 }, { button: 0 });
+assert.strictEqual(mockCad.objects.length, 5); // Rectangle offset created!
+assert.strictEqual(toolMgr.offsetState, 'SELECT_OBJECT'); // Still active!
+
+// ESC terminates OFFSET
+toolMgr.cancelDrawing();
+assert.strictEqual(toolMgr.offsetState, null);
+assert.strictEqual(mockCad.objects.length, 5); // Offset geometry remains intact
+
+console.log("-> PASS: Command suggestions work, OFFSET repeats continuously across multiple objects with distance memory, and ESC exits cleanly.\n");
 
 console.log('====================================================');
 console.log('ALL AUTOCAD CLICK INTERACTION TESTS PASSED 100%!');
