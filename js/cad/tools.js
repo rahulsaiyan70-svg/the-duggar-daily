@@ -185,9 +185,18 @@ class CADToolManager {
       const wInput = document.getElementById('dynWidthInput');
       const hInput = document.getElementById('dynHeightInput');
 
-      if (wInput && hInput) {
-        const widthFeet = typeof Units !== 'undefined' ? Units.toFeet(wInput.value) : (parseFloat(wInput.value) || 0);
-        const heightFeet = typeof Units !== 'undefined' ? Units.toFeet(hInput.value) : (parseFloat(hInput.value) || 0);
+      if (wInput) {
+        let widthFeet = typeof Units !== 'undefined' ? Units.toFeet(wInput.value) : (parseFloat(wInput.value) || 0);
+        let heightFeet = hInput ? (typeof Units !== 'undefined' ? Units.toFeet(hInput.value) : (parseFloat(hInput.value) || 0)) : 0;
+
+        if (wInput.value.includes(',')) {
+          const parts = wInput.value.split(',');
+          widthFeet = typeof Units !== 'undefined' ? Units.toFeet(parts[0]) : (parseFloat(parts[0]) || 0);
+          if (parts.length > 1) {
+            heightFeet = typeof Units !== 'undefined' ? Units.toFeet(parts[1]) : (parseFloat(parts[1]) || 0);
+          }
+        }
+
         const minX = this.startPt.x;
         const minY = this.startPt.y;
 
@@ -302,7 +311,13 @@ class CADToolManager {
         e.preventDefault();
         this.cad.orthoLock = !this.cad.orthoLock;
         const btnOrtho = document.getElementById('btnToggleOrtho');
-        if (btnOrtho) btnOrtho.classList.toggle('active', this.cad.orthoLock);
+        if (btnOrtho) {
+          btnOrtho.classList.toggle('active', this.cad.orthoLock);
+          btnOrtho.textContent = this.cad.orthoLock ? '📐 Ortho [ON]' : '📐 Ortho [OFF]';
+        }
+        if (window.cadCommandLine) {
+          window.cadCommandLine.logMessage(`ORTHO ${this.cad.orthoLock ? 'ON' : 'OFF'}`);
+        }
         return;
       }
 
@@ -368,6 +383,11 @@ class CADToolManager {
     canvas.addEventListener('mousedown', (e) => {
       if (e.button !== 0) return;
       const pt = this.cad.snappedWorld;
+
+      if (window.cadCommandLine && window.cadCommandLine.activeCommandState) {
+        const handled = window.cadCommandLine.handleCanvasClick(pt);
+        if (handled) return;
+      }
 
       if (this.cad.activeTool === 'select') {
         this.handleSelectMouseDown(pt, e.shiftKey);

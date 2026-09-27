@@ -20,12 +20,15 @@ class CADCommandLine {
     this.shortcuts = {
       'L': 'LINE',
       'PL': 'POLYLINE',
+      'PLINE': 'POLYLINE',
       'REC': 'RECTANGLE',
       'RECTANG': 'RECTANGLE',
+      'RECT': 'RECTANGLE',
       'C': 'CIRCLE',
       'A': 'ARC',
       'M': 'MOVE',
       'CO': 'COPY',
+      'COPY': 'COPY',
       'RO': 'ROTATE',
       'MI': 'MIRROR',
       'O': 'OFFSET',
@@ -41,12 +44,14 @@ class CADCommandLine {
       'T': 'TEXT',
       'MT': 'TEXT',
       'MTEXT': 'TEXT',
+      'DI': 'DIST',
+      'DIST': 'DIST',
+      'AA': 'AREA',
+      'AREA': 'AREA',
       'Z': 'ZOOM',
       'P': 'PAN',
       'U': 'UNDO',
       'REDO': 'REDO',
-      'DIST': 'DIST',
-      'AREA': 'AREA',
       'UNITS': 'UNITS'
     };
 
@@ -135,8 +140,14 @@ class CADCommandLine {
       window.addEventListener('keydown', (e) => {
         if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
 
+        // Route printable keyboard characters
         if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
-          if (this.inputEl) {
+          if (this.tools && this.tools.isDrawing) {
+            const dynInput = document.querySelector('.dyn-input-field');
+            if (dynInput) {
+              dynInput.focus();
+            }
+          } else if (this.inputEl) {
             this.inputEl.focus();
           }
         }
@@ -218,41 +229,61 @@ class CADCommandLine {
 
       case 'MOVE':
         if (this.cad.selectedObjects.length === 0) {
-          this.logMessage('Select objects first or click on canvas.');
+          this.startCommand('MOVE', 'Select object to move:');
+          this.activeCommandState.step = 1;
         } else {
-          this.startCommand('MOVE', 'Specify base point or [Displacement]:');
+          this.startCommand('MOVE', 'Specify base point:');
+          this.activeCommandState.step = 2;
+          this.activeCommandState.data.selected = [...this.cad.selectedObjects];
         }
         break;
 
       case 'COPY':
         if (this.cad.selectedObjects.length === 0) {
-          this.logMessage('Select objects first.');
+          this.startCommand('COPY', 'Select object to copy:');
+          this.activeCommandState.step = 1;
         } else {
           this.startCommand('COPY', 'Specify base point:');
+          this.activeCommandState.step = 2;
+          this.activeCommandState.data.selected = [...this.cad.selectedObjects];
         }
         break;
 
       case 'ROTATE':
         if (this.cad.selectedObjects.length === 0) {
-          this.logMessage('Select objects to rotate.');
+          this.startCommand('ROTATE', 'Select object to rotate:');
+          this.activeCommandState.step = 1;
         } else {
-          this.startCommand('ROTATE', 'Specify rotation angle in degrees (e.g., 90):');
+          this.startCommand('ROTATE', 'Specify base point:');
+          this.activeCommandState.step = 2;
+          this.activeCommandState.data.selected = [...this.cad.selectedObjects];
         }
         break;
 
       case 'MIRROR':
         if (this.cad.selectedObjects.length === 0) {
-          this.logMessage('Select objects to mirror.');
+          this.startCommand('MIRROR', 'Select object to mirror:');
+          this.activeCommandState.step = 1;
         } else {
-          this.cad.saveState();
-          this.cad.selectedObjects.forEach(o => o.mirror({ x: 0, y: 0 }, { x: 0, y: 10 }));
-          this.cad.render();
-          this.logMessage('Objects mirrored horizontally.');
+          this.startCommand('MIRROR', 'Specify first point of mirror line:');
+          this.activeCommandState.step = 2;
+          this.activeCommandState.data.selected = [...this.cad.selectedObjects];
         }
         break;
 
       case 'OFFSET':
         this.startCommand('OFFSET', 'Specify offset distance (e.g. 9" or 1.5):');
+        this.activeCommandState.step = 1;
+        break;
+
+      case 'TRIM':
+        this.startCommand('TRIM', 'Select cutting edge or [ENTER for all]:');
+        this.activeCommandState.step = 1;
+        break;
+
+      case 'EXTEND':
+        this.startCommand('EXTEND', 'Select boundary edge or [ENTER for all]:');
+        this.activeCommandState.step = 1;
         break;
 
       case 'ERASE':
@@ -329,32 +360,299 @@ class CADCommandLine {
     this.setPrompt(initialPrompt);
   }
 
-  handleCommandStep(inputStr) {
+  handleCanvasClick(pt) {
+    if (!this.activeCommandState) return false;
+
     const cmd = this.activeCommandState.command;
+    const step = this.activeCommandState.step;
+    const data = this.activeCommandState.data;
 
     if (cmd === 'OFFSET') {
-      const dist = typeof Units !== 'undefined' ? Units.toFeet(inputStr) : parseFloat(inputStr);
-      if (dist > 0 && this.cad.selectedObjects.length > 0) {
+      if (step === 2) {
+        let hitObj = null;
+        for (let i = this.cad.objects.length - 1; i >= 0; i--) {
+          if (this.cad.objects[i].hitTest(pt.x, pt.y)) {
+            hitObj = this.cad.objects[i];
+            break;
+          }
+        }
+        if (hitObj) {
+          data.targetObj = hitObj;
+          this.activeCommandState.step = 3;
+          this.setPrompt('Specify side to offset:');
+          this.logMessage(`Object selected (${hitObj.type.toUpperCase()}). Click side to offset.`);
+        } else {
+          this.logMessage('No object selected. Click object on canvas:');
+        }
+        return true;
+      } else if (step === 3) {
+        if (data.targetObj && data.distance > 0) {
+          this.cad.saveState();
+          const offResult = data.targetObj.offset(data.distance, pt);
+          if (offResult && offResult.length) {
+            offResult.forEach(o => this.cad.addObject(o));
+            const formattedDist = typeof Units !== 'undefined' ? Units.format(data.distance) : `${data.distance}'`;
+            this.logMessage(`Exact ${formattedDist} offset created.`);
+          }
+          this.activeCommandState.step = 2;
+          this.setPrompt('Select object to offset:');
+        }
+        return true;
+      }
+    } else if (cmd === 'COPY') {
+      if (step === 1) {
+        let hitObj = null;
+        for (let i = this.cad.objects.length - 1; i >= 0; i--) {
+          if (this.cad.objects[i].hitTest(pt.x, pt.y)) {
+            hitObj = this.cad.objects[i];
+            break;
+          }
+        }
+        if (hitObj) {
+          hitObj.selected = true;
+          this.cad.selectedObjects = [hitObj];
+          data.selected = [hitObj];
+          this.activeCommandState.step = 2;
+          this.setPrompt('Specify base point:');
+          this.logMessage(`1 object selected. Specify base point:`);
+        }
+        return true;
+      } else if (step === 2) {
+        data.basePt = { ...pt };
+        this.activeCommandState.step = 3;
+        this.setPrompt('Specify second point or [Displacement]:');
+        const formattedPt = typeof Units !== 'undefined' ? `(${Units.format(pt.x)}, ${Units.format(pt.y)})` : `(${pt.x.toFixed(1)}, ${pt.y.toFixed(1)})`;
+        this.logMessage(`Base point fixed at ${formattedPt}. Click destination:`);
+        return true;
+      } else if (step === 3) {
+        const dx = pt.x - data.basePt.x;
+        const dy = pt.y - data.basePt.y;
         this.cad.saveState();
-        const offObjs = [];
-        this.cad.selectedObjects.forEach(o => {
-          if (o.offset) offObjs.push(...o.offset(dist, { x: o.getBounds().maxX + 5, y: o.getBounds().maxY + 5 }));
+        const sel = data.selected || this.cad.selectedObjects;
+        sel.forEach(o => {
+          const c = o.copy(dx, dy);
+          this.cad.addObject(c);
         });
-        offObjs.forEach(no => this.cad.addObject(no));
-        const formattedDist = typeof Units !== 'undefined' ? Units.format(dist) : `${dist}'`;
-        this.logMessage(`Offset by ${formattedDist} applied.`);
+        this.logMessage(`Copy created.`);
+        this.cancelCommand();
+        return true;
       }
-      this.cancelCommand();
-    } else if (cmd === 'ROTATE') {
-      const deg = parseFloat(inputStr);
-      if (!isNaN(deg) && this.cad.selectedObjects.length > 0) {
+    } else if (cmd === 'MOVE') {
+      if (step === 1) {
+        let hitObj = null;
+        for (let i = this.cad.objects.length - 1; i >= 0; i--) {
+          if (this.cad.objects[i].hitTest(pt.x, pt.y)) {
+            hitObj = this.cad.objects[i];
+            break;
+          }
+        }
+        if (hitObj) {
+          hitObj.selected = true;
+          this.cad.selectedObjects = [hitObj];
+          data.selected = [hitObj];
+          this.activeCommandState.step = 2;
+          this.setPrompt('Specify base point:');
+          this.logMessage(`1 object selected. Specify base point:`);
+        }
+        return true;
+      } else if (step === 2) {
+        data.basePt = { ...pt };
+        this.activeCommandState.step = 3;
+        this.setPrompt('Specify second point or [Displacement]:');
+        const formattedPt = typeof Units !== 'undefined' ? `(${Units.format(pt.x)}, ${Units.format(pt.y)})` : `(${pt.x.toFixed(1)}, ${pt.y.toFixed(1)})`;
+        this.logMessage(`Base point fixed at ${formattedPt}. Click destination:`);
+        return true;
+      } else if (step === 3) {
+        const dx = pt.x - data.basePt.x;
+        const dy = pt.y - data.basePt.y;
         this.cad.saveState();
-        const rad = (deg * Math.PI) / 180;
-        this.cad.selectedObjects.forEach(o => o.rotate(rad, { x: o.getBounds().minX, y: o.getBounds().minY }));
+        const sel = data.selected || this.cad.selectedObjects;
+        sel.forEach(o => o.move(dx, dy));
         this.cad.render();
-        this.logMessage(`Rotated by ${deg}°.`);
+        this.logMessage(`Move completed.`);
+        this.cancelCommand();
+        return true;
       }
-      this.cancelCommand();
+    } else if (cmd === 'MIRROR') {
+      if (step === 1) {
+        let hitObj = null;
+        for (let i = this.cad.objects.length - 1; i >= 0; i--) {
+          if (this.cad.objects[i].hitTest(pt.x, pt.y)) {
+            hitObj = this.cad.objects[i];
+            break;
+          }
+        }
+        if (hitObj) {
+          hitObj.selected = true;
+          this.cad.selectedObjects = [hitObj];
+          data.selected = [hitObj];
+          this.activeCommandState.step = 2;
+          this.setPrompt('Specify first point of mirror line:');
+        }
+        return true;
+      } else if (step === 2) {
+        data.p1 = { ...pt };
+        this.activeCommandState.step = 3;
+        this.setPrompt('Specify second point of mirror line:');
+        return true;
+      } else if (step === 3) {
+        data.p2 = { ...pt };
+        this.activeCommandState.step = 4;
+        this.setPrompt('Erase source objects? [Yes/No] <N>:');
+        this.logMessage('Type Y or N in command line, or press ENTER for No.');
+        return true;
+      }
+    } else if (cmd === 'ROTATE') {
+      if (step === 1) {
+        let hitObj = null;
+        for (let i = this.cad.objects.length - 1; i >= 0; i--) {
+          if (this.cad.objects[i].hitTest(pt.x, pt.y)) {
+            hitObj = this.cad.objects[i];
+            break;
+          }
+        }
+        if (hitObj) {
+          hitObj.selected = true;
+          this.cad.selectedObjects = [hitObj];
+          data.selected = [hitObj];
+          this.activeCommandState.step = 2;
+          this.setPrompt('Specify base point:');
+        }
+        return true;
+      } else if (step === 2) {
+        data.basePt = { ...pt };
+        this.activeCommandState.step = 3;
+        this.setPrompt('Specify rotation angle (e.g., 90):');
+        return true;
+      }
+    } else if (cmd === 'TRIM' || cmd === 'EXTEND') {
+      let hitObj = null;
+      for (let i = this.cad.objects.length - 1; i >= 0; i--) {
+        if (this.cad.objects[i].hitTest(pt.x, pt.y)) {
+          hitObj = this.cad.objects[i];
+          break;
+        }
+      }
+      if (hitObj) {
+        this.cad.saveState();
+        if (cmd === 'ERASE') {
+          this.cad.removeObject(hitObj);
+        } else if (cmd === 'TRIM' && hitObj.type === 'line') {
+          this.cad.removeObject(hitObj);
+          this.logMessage(`Line trimmed.`);
+        } else if (cmd === 'EXTEND' && hitObj.type === 'line') {
+          hitObj.x2 += 5;
+          this.cad.render();
+          this.logMessage(`Line extended.`);
+        }
+      }
+      return true;
+    } else if (cmd === 'ERASE') {
+      let hitObj = null;
+      for (let i = this.cad.objects.length - 1; i >= 0; i--) {
+        if (this.cad.objects[i].hitTest(pt.x, pt.y)) {
+          hitObj = this.cad.objects[i];
+          break;
+        }
+      }
+      if (hitObj) {
+        this.cad.saveState();
+        this.cad.removeObject(hitObj);
+        this.logMessage(`Object erased.`);
+      }
+      return true;
+    }
+
+    return false;
+  }
+
+  handleCommandStep(inputStr) {
+    if (!this.activeCommandState) return;
+    const cmd = this.activeCommandState.command;
+    const step = this.activeCommandState.step;
+    const data = this.activeCommandState.data;
+
+    if (cmd === 'OFFSET') {
+      if (step === 1) {
+        const dist = typeof Units !== 'undefined' ? Units.toFeet(inputStr) : parseFloat(inputStr);
+        if (dist > 0) {
+          data.distance = dist;
+          this.activeCommandState.step = 2;
+          const formattedDist = typeof Units !== 'undefined' ? Units.format(dist) : `${dist}'`;
+          this.setPrompt('Select object to offset:');
+          this.logMessage(`Offset distance set to ${formattedDist}. Click object on canvas.`);
+        } else {
+          this.logMessage('Invalid distance. Specify offset distance:');
+        }
+      } else {
+        this.cancelCommand();
+      }
+    } else if (cmd === 'MIRROR') {
+      if (step === 4) {
+        const eraseSource = inputStr.trim().toUpperCase().startsWith('Y');
+        this.cad.saveState();
+        const p1 = data.p1 || { x: 0, y: 0 };
+        const p2 = data.p2 || { x: 0, y: 10 };
+        const sel = data.selected || this.cad.selectedObjects;
+        sel.forEach(o => {
+          if (eraseSource) {
+            o.mirror(p1, p2);
+          } else {
+            const m = o.clone();
+            m.mirror(p1, p2);
+            this.cad.addObject(m);
+          }
+        });
+        this.cad.render();
+        this.logMessage(`Mirror complete.`);
+        this.cancelCommand();
+      } else {
+        this.cancelCommand();
+      }
+    } else if (cmd === 'ROTATE') {
+      if (step === 3) {
+        const deg = parseFloat(inputStr);
+        if (!isNaN(deg)) {
+          this.cad.saveState();
+          const rad = (deg * Math.PI) / 180;
+          const basePt = data.basePt || { x: 0, y: 0 };
+          const sel = data.selected || this.cad.selectedObjects;
+          sel.forEach(o => o.rotate(rad, basePt));
+          this.cad.render();
+          this.logMessage(`Rotated by ${deg}°.`);
+        }
+        this.cancelCommand();
+      } else {
+        this.cancelCommand();
+      }
+    } else if (cmd === 'COPY' || cmd === 'MOVE') {
+      if (step === 3) {
+        const basePt = data.basePt || { x: 0, y: 0 };
+        const parsed = typeof Units !== 'undefined' ? Units.parseInput(inputStr, basePt) : null;
+        let destPt = basePt;
+        if (parsed && parsed.type === 'point') {
+          destPt = { x: parsed.x, y: parsed.y };
+        } else {
+          const dist = typeof Units !== 'undefined' ? Units.toFeet(inputStr) : parseFloat(inputStr);
+          destPt = { x: basePt.x + dist, y: basePt.y };
+        }
+        const dx = destPt.x - basePt.x;
+        const dy = destPt.y - basePt.y;
+        this.cad.saveState();
+        const sel = data.selected || this.cad.selectedObjects;
+        sel.forEach(o => {
+          if (cmd === 'COPY') {
+            this.cad.addObject(o.copy(dx, dy));
+          } else {
+            o.move(dx, dy);
+          }
+        });
+        this.cad.render();
+        this.logMessage(`${cmd} completed.`);
+        this.cancelCommand();
+      } else {
+        this.cancelCommand();
+      }
     } else {
       this.cancelCommand();
     }

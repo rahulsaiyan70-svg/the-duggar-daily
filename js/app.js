@@ -144,6 +144,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnToggleOrtho').addEventListener('click', function() {
     cadCanvas.orthoLock = !cadCanvas.orthoLock;
     this.classList.toggle('active', cadCanvas.orthoLock);
+    this.textContent = cadCanvas.orthoLock ? '📐 Ortho [ON]' : '📐 Ortho [OFF]';
+    if (window.cadCommandLine) {
+      window.cadCommandLine.logMessage(`ORTHO ${cadCanvas.orthoLock ? 'ON' : 'OFF'}`);
+    }
   });
 
   document.getElementById('btnUndo').addEventListener('click', () => cadCanvas.undo());
