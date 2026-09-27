@@ -46,13 +46,33 @@ class MockElement {
     if (!this.listeners[event]) this.listeners[event] = [];
     this.listeners[event].push(fn);
   }
-  focus() {}
+  focus() { global.document.activeElement = this; }
   select() {}
+  contains(node) { return this === node || this.children.includes(node); }
 }
 
 const mockViewport = new MockElement('canvasViewport');
 const mockCanvasEl = new MockElement('elevationCanvas', 'canvas');
 mockCanvasEl.parentElement = mockViewport;
+const mockDynContainer = new MockElement('dynamicInputContainer');
+
+function parseHTMLToChildren(html, parent) {
+  parent.children = [];
+  const inputMatches = html.matchAll(/<input[^>]*id="([^"]+)"[^>]*>/g);
+  for (const match of inputMatches) {
+    const el = new MockElement(match[1], 'input');
+    el.classes.add('dyn-input-field');
+    parent.children.push(el);
+  }
+}
+
+Object.defineProperty(mockDynContainer, 'innerHTML', {
+  get() { return this._innerHTML || ''; },
+  set(val) {
+    this._innerHTML = val;
+    parseHTMLToChildren(val, this);
+  }
+});
 
 global.document = {
   createElement: (tag) => new MockElement('', tag),
@@ -60,7 +80,7 @@ global.document = {
     if (id === 'canvasViewport') return mockViewport;
     if (id === 'elevationCanvas') return mockCanvasEl;
     if (id === 'dynamicInputContainer') return mockDynContainer;
-    return null;
+    return mockDynContainer.children.find(c => c.id === id) || null;
   },
   activeElement: null
 };
@@ -78,8 +98,6 @@ global.CADPolyline = CADPolyline;
 global.CADWindow = CADWindow;
 global.CADDoor = CADDoor;
 global.CADBalcony = CADBalcony;
-
-const mockDynContainer = new MockElement('dynamicInputContainer');
 
 class MockCADCanvas {
   constructor() {
@@ -111,12 +129,14 @@ toolMgr.handleToolMouseDown({ x: 0, y: 0 }, { button: 0 });
 assert.strictEqual(toolMgr.isDrawing, true);
 assert.deepStrictEqual(toolMgr.startPt, { x: 0, y: 0 });
 
-// Type '5'' into dynamic input and press Enter
-const lenInput1 = new MockElement('dynLenInput', 'input');
-lenInput1.classes.add('dyn-input-field');
+const lenInput1 = document.getElementById('dynLenInput');
+assert(lenInput1);
 lenInput1.value = "5'";
-mockDynContainer.children = [lenInput1];
-global.document.getElementById = (id) => id === 'dynLenInput' ? lenInput1 : null;
+lenInput1.focus();
+
+// Mouse move should NOT overwrite focused field value
+toolMgr.showDynamicInput(150, 150, 'line', { length: 8, angle: 0 });
+assert.strictEqual(lenInput1.value, "5'");
 
 toolMgr.applyDynamicInput();
 
@@ -124,37 +144,33 @@ assert.strictEqual(mockCad.objects.length, 1);
 assert.strictEqual(mockCad.objects[0].type, 'line');
 assert.strictEqual(mockCad.objects[0].x1, 0);
 assert.strictEqual(mockCad.objects[0].x2, 5);
-// Continuous LINE behavior check
 assert.strictEqual(toolMgr.startPt.x, 5);
 console.log("-> PASS: Exact 5-ft line created by click + typing. Line continues automatically to (5,0).\n");
 
 
-// --- TEST 2: RECTANGLE - Click once, Width = 10', Height = 8', Enter ---
-console.log("Test 2: RECTANGLE - Click corner, Width = 10', Height = 8', Enter");
+// --- TEST 2: RECTANGLE - Click once, Width = 12', Height = 8', Enter ---
+console.log("Test 2: RECTANGLE - Click corner, Width = 12', Height = 8', Enter");
 toolMgr.setTool('rectangle');
 
 // Mouse click 1: Fix FIRST CORNER
 toolMgr.handleToolMouseDown({ x: 0, y: 0 }, { button: 0 });
 assert.strictEqual(toolMgr.isDrawing, true);
 
-const wInput = new MockElement('dynWidthInput', 'input');
-wInput.value = "10'";
-const hInput = new MockElement('dynHeightInput', 'input');
+const wInput = document.getElementById('dynWidthInput');
+const hInput = document.getElementById('dynHeightInput');
+assert(wInput && hInput);
+
+wInput.value = "12'";
 hInput.value = "8'";
-global.document.getElementById = (id) => {
-  if (id === 'dynWidthInput') return wInput;
-  if (id === 'dynHeightInput') return hInput;
-  return null;
-};
 
 toolMgr.applyDynamicInput();
 
 const rect = mockCad.objects.find(o => o.type === 'rectangle');
 assert(rect);
-assert.strictEqual(rect.width, 10);
+assert.strictEqual(rect.width, 12);
 assert.strictEqual(rect.height, 8);
 assert.strictEqual(toolMgr.isDrawing, false);
-console.log("-> PASS: Exact 10' x 8' rectangle created on single click + keyboard entry.\n");
+console.log("-> PASS: Exact 12' x 8' rectangle created on single click + keyboard entry.\n");
 
 
 // --- TEST 3: CIRCLE - Click center, Radius = 3', Enter ---
@@ -164,9 +180,9 @@ toolMgr.setTool('circle');
 toolMgr.handleToolMouseDown({ x: 5, y: 5 }, { button: 0 });
 assert.strictEqual(toolMgr.isDrawing, true);
 
-const rInput = new MockElement('dynRadiusInput', 'input');
+const rInput = document.getElementById('dynRadiusInput');
+assert(rInput);
 rInput.value = "3'";
-global.document.getElementById = (id) => id === 'dynRadiusInput' ? rInput : null;
 
 toolMgr.applyDynamicInput();
 

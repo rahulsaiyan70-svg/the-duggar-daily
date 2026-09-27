@@ -14,6 +14,7 @@ class CADToolManager {
     this.drawingPoints = []; // Polyline points
     this.draggedObject = null;
     this.dragOffset = { x: 0, y: 0 };
+    this.currentToolMode = null;
 
     // Dynamic Input Overlay Elements
     this.dynamicInputContainer = null;
@@ -33,64 +34,60 @@ class CADToolManager {
       const viewport = document.getElementById('canvasViewport') || document.body;
       viewport.appendChild(container);
     }
+
+    // Stop mouse event propagation from dynamic input box to underlying canvas
+    ['mousedown', 'mouseup', 'click', 'dblclick', 'pointerdown', 'pointerup'].forEach(evtType => {
+      container.addEventListener(evtType, (e) => {
+        e.stopPropagation();
+      });
+    });
+
     this.dynamicInputContainer = container;
   }
 
-  showDynamicInput(screenX, screenY, toolName, values = {}) {
+  setupDynamicInputDOM(toolName) {
     if (!this.dynamicInputContainer) return;
 
-    this.dynamicInputContainer.style.left = `${screenX + 20}px`;
-    this.dynamicInputContainer.style.top = `${screenY + 20}px`;
-    this.dynamicInputContainer.classList.remove('hidden');
-
-    const activeEl = typeof document !== 'undefined' ? document.activeElement : null;
-    const isFieldFocused = activeEl && this.dynamicInputContainer.contains(activeEl);
-
-    // If user is actively typing/editing inside dynamic input, update position only and preserve typed values
-    if (isFieldFocused) {
-      return;
+    if (this.currentToolMode === toolName && this.dynamicInputContainer.children.length > 0) {
+      return; // DOM structure already initialized for this tool
     }
 
-    const formattedLen = typeof Units !== 'undefined' ? Units.format(values.length || 0) : `${(values.length || 0).toFixed(2)}'`;
-    const formattedWidth = typeof Units !== 'undefined' ? Units.format(values.width || 0) : `${(values.width || 0).toFixed(2)}'`;
-    const formattedHeight = typeof Units !== 'undefined' ? Units.format(values.height || 0) : `${(values.height || 0).toFixed(2)}'`;
-    const formattedRadius = typeof Units !== 'undefined' ? Units.format(values.radius || 0) : `${(values.radius || 0).toFixed(2)}'`;
-    const formattedAngle = `${Math.round(values.angle || 0)}°`;
+    this.currentToolMode = toolName;
 
     if (['line', 'wall', 'polyline'].includes(toolName)) {
       this.dynamicInputContainer.innerHTML = `
         <div class="dyn-input-group">
           <label>Length:</label>
-          <input type="text" id="dynLenInput" value="${formattedLen}" class="dyn-input-field" autocomplete="off">
+          <input type="text" id="dynLenInput" class="dyn-input-field" autocomplete="off" placeholder="5'">
         </div>
         <div class="dyn-input-group">
           <label>Angle:</label>
-          <input type="text" id="dynAngleInput" value="${formattedAngle}" class="dyn-input-field" autocomplete="off">
+          <input type="text" id="dynAngleInput" class="dyn-input-field" autocomplete="off" placeholder="0°">
         </div>
       `;
     } else if (['rectangle', 'window', 'door', 'balcony', 'column', 'slab', 'parapet', 'stair'].includes(toolName)) {
       this.dynamicInputContainer.innerHTML = `
         <div class="dyn-input-group">
           <label>Width:</label>
-          <input type="text" id="dynWidthInput" value="${formattedWidth}" class="dyn-input-field" autocomplete="off">
+          <input type="text" id="dynWidthInput" class="dyn-input-field" autocomplete="off" placeholder="10'">
         </div>
         <div class="dyn-input-group">
           <label>Height:</label>
-          <input type="text" id="dynHeightInput" value="${formattedHeight}" class="dyn-input-field" autocomplete="off">
+          <input type="text" id="dynHeightInput" class="dyn-input-field" autocomplete="off" placeholder="8'">
         </div>
       `;
     } else if (['circle', 'arc'].includes(toolName)) {
       this.dynamicInputContainer.innerHTML = `
         <div class="dyn-input-group">
           <label>Radius:</label>
-          <input type="text" id="dynRadiusInput" value="${formattedRadius}" class="dyn-input-field" autocomplete="off">
+          <input type="text" id="dynRadiusInput" class="dyn-input-field" autocomplete="off" placeholder="3'">
         </div>
       `;
     } else if (toolName === 'dimension') {
       this.dynamicInputContainer.innerHTML = `
         <div class="dyn-input-group">
           <label>Distance:</label>
-          <input type="text" id="dynLenInput" value="${formattedLen}" class="dyn-input-field" autocomplete="off">
+          <input type="text" id="dynLenInput" class="dyn-input-field" autocomplete="off" placeholder="5'">
         </div>
       `;
     }
@@ -98,10 +95,49 @@ class CADToolManager {
     this.attachDynamicInputListeners();
   }
 
+  showDynamicInput(screenX, screenY, toolName, values = {}) {
+    if (!this.dynamicInputContainer) return;
+
+    // 1. Position overlay container near cursor
+    this.dynamicInputContainer.style.left = `${screenX + 20}px`;
+    this.dynamicInputContainer.style.top = `${screenY + 20}px`;
+    this.dynamicInputContainer.classList.remove('hidden');
+
+    // 2. Build DOM layout if not present
+    this.setupDynamicInputDOM(toolName);
+
+    // 3. Update field values ONLY IF user is NOT actively focusing/typing in the field
+    const activeEl = typeof document !== 'undefined' ? document.activeElement : null;
+
+    const formattedLen = typeof Units !== 'undefined' ? Units.format(values.length || 0) : `${(values.length || 0).toFixed(2)}'`;
+    const formattedWidth = typeof Units !== 'undefined' ? Units.format(values.width || 0) : `${(values.width || 0).toFixed(2)}'`;
+    const formattedHeight = typeof Units !== 'undefined' ? Units.format(values.height || 0) : `${(values.height || 0).toFixed(2)}'`;
+    const formattedRadius = typeof Units !== 'undefined' ? Units.format(values.radius || 0) : `${(values.radius || 0).toFixed(2)}'`;
+    const formattedAngle = `${Math.round(values.angle || 0)}°`;
+
+    const updateField = (id, valStr) => {
+      const field = document.getElementById(id);
+      if (field && activeEl !== field) {
+        field.value = valStr;
+      }
+    };
+
+    if (['line', 'wall', 'polyline', 'dimension'].includes(toolName)) {
+      updateField('dynLenInput', formattedLen);
+      updateField('dynAngleInput', formattedAngle);
+    } else if (['rectangle', 'window', 'door', 'balcony', 'column', 'slab', 'parapet', 'stair'].includes(toolName)) {
+      updateField('dynWidthInput', formattedWidth);
+      updateField('dynHeightInput', formattedHeight);
+    } else if (['circle', 'arc'].includes(toolName)) {
+      updateField('dynRadiusInput', formattedRadius);
+    }
+  }
+
   hideDynamicInput() {
     if (this.dynamicInputContainer) {
       this.dynamicInputContainer.classList.add('hidden');
     }
+    this.currentToolMode = null;
   }
 
   attachDynamicInputListeners() {
@@ -123,7 +159,66 @@ class CADToolManager {
           fields[nextIndex].select();
         }
       });
+
+      field.addEventListener('input', () => {
+        this.updatePreviewFromInput();
+      });
     });
+  }
+
+  updatePreviewFromInput() {
+    if (!this.startPt) return;
+
+    const tool = this.cad.activeTool;
+
+    if (['line', 'wall', 'polyline', 'dimension'].includes(tool)) {
+      const lenInput = document.getElementById('dynLenInput');
+      const angleInput = document.getElementById('dynAngleInput');
+
+      if (lenInput && lenInput.value) {
+        const distFeet = typeof Units !== 'undefined' ? Units.toFeet(lenInput.value) : (parseFloat(lenInput.value) || 0);
+        let angleDeg = 0;
+
+        if (angleInput && angleInput.value) {
+          angleDeg = parseFloat(angleInput.value.replace('°', '')) || 0;
+        } else if (this.currentPt) {
+          const dx = this.currentPt.x - this.startPt.x;
+          const dy = this.currentPt.y - this.startPt.y;
+          angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
+        }
+
+        const rad = (angleDeg * Math.PI) / 180;
+        this.currentPt = {
+          x: this.startPt.x + distFeet * Math.cos(rad),
+          y: this.startPt.y + distFeet * Math.sin(rad)
+        };
+        this.cad.render();
+      }
+    } else if (['rectangle', 'window', 'door', 'balcony', 'column', 'slab', 'parapet', 'stair'].includes(tool)) {
+      const wInput = document.getElementById('dynWidthInput');
+      const hInput = document.getElementById('dynHeightInput');
+
+      if (wInput && hInput) {
+        const w = typeof Units !== 'undefined' ? Units.toFeet(wInput.value) : (parseFloat(wInput.value) || 0);
+        const h = typeof Units !== 'undefined' ? Units.toFeet(hInput.value) : (parseFloat(hInput.value) || 0);
+
+        this.currentPt = {
+          x: this.startPt.x + w,
+          y: this.startPt.y + h
+        };
+        this.cad.render();
+      }
+    } else if (['circle', 'arc'].includes(tool)) {
+      const rInput = document.getElementById('dynRadiusInput');
+      if (rInput) {
+        const r = typeof Units !== 'undefined' ? Units.toFeet(rInput.value) : (parseFloat(rInput.value) || 0);
+        this.currentPt = {
+          x: this.startPt.x + r,
+          y: this.startPt.y
+        };
+        this.cad.render();
+      }
+    }
   }
 
   applyDynamicInput() {
@@ -162,6 +257,14 @@ class CADToolManager {
             window.cadCommandLine.setPrompt('Specify next point or [Length/Angle]:');
             window.cadCommandLine.logMessage(`Length = ${typeof Units !== 'undefined' ? Units.format(distFeet) : distFeet + "'"}`);
           }
+          // Reset DOM so new segment shows fresh initial field state
+          this.currentToolMode = null;
+          this.setupDynamicInputDOM(tool);
+          const primaryInput = document.getElementById('dynLenInput');
+          if (primaryInput) {
+            primaryInput.focus();
+            primaryInput.select();
+          }
         } else if (tool === 'polyline') {
           this.drawingPoints.push({ ...targetPt });
           this.startPt = { ...targetPt };
@@ -169,6 +272,13 @@ class CADToolManager {
           if (window.cadCommandLine) {
             window.cadCommandLine.setPrompt('Specify next point or [ENTER to finish]:');
             window.cadCommandLine.logMessage(`Segment = ${typeof Units !== 'undefined' ? Units.format(distFeet) : distFeet + "'"}`);
+          }
+          this.currentToolMode = null;
+          this.setupDynamicInputDOM(tool);
+          const primaryInput = document.getElementById('dynLenInput');
+          if (primaryInput) {
+            primaryInput.focus();
+            primaryInput.select();
           }
         } else if (tool === 'wall') {
           const thickness = 0.75; // 9 inches standard
