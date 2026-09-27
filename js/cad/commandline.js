@@ -192,17 +192,17 @@ class CADCommandLine {
         break;
 
       case 'WINDOW':
-        this.startCommand('WINDOW', 'Specify window corner point:');
+        this.startCommand('WINDOW', 'Specify window insertion point:');
         this.tools.setTool('window');
         break;
 
       case 'DOOR':
-        this.startCommand('DOOR', 'Specify door corner point:');
+        this.startCommand('DOOR', 'Specify door insertion point:');
         this.tools.setTool('door');
         break;
 
       case 'BALCONY':
-        this.startCommand('BALCONY', 'Specify balcony corner point:');
+        this.startCommand('BALCONY', 'Specify balcony insertion point:');
         this.tools.setTool('balcony');
         break;
 
