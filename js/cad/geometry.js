@@ -45,7 +45,15 @@ class CADObject {
   mirror(p1, p2) {}
 
   offset(distance, sidePt) {
-    return [this.clone()];
+    const b = this.getBounds();
+    const isInside = sidePt.x >= b.minX && sidePt.x <= b.maxX && sidePt.y >= b.minY && sidePt.y <= b.maxY;
+    const sign = isInside ? -1 : 1;
+    const newW = this.width + 2 * distance * sign;
+    const newH = this.height + 2 * distance * sign;
+    if (newW <= 0 || newH <= 0) return [this.clone()];
+    const newX = this.x - distance * sign;
+    const newY = this.y - distance * sign;
+    return [new CADRect(newX, newY, newW, newH, this.type)];
   }
 
   explode() {
@@ -406,6 +414,13 @@ class CADCircle extends CADObject {
     this.cx = cx;
     this.cy = cy;
     this.radius = radius;
+  }
+
+  offset(distance, sidePt) {
+    const distToCenter = Math.hypot(sidePt.x - this.cx, sidePt.y - this.cy);
+    const isOutside = distToCenter > this.radius;
+    const newRadius = isOutside ? this.radius + distance : Math.max(0.1, this.radius - distance);
+    return [new CADCircle(this.cx, this.cy, newRadius)];
   }
 
   getBounds() {

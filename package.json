@@ -24,6 +24,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",
     "jspdf": "^4.2.1",
+    "playwright": "^1.63.0",
     "three": "^0.186.1"
   }
 }
