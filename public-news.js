@@ -1,6 +1,6 @@
 (() => {
   const client = window.ddSupabase;
-  const grid = document.getElementById("latest-grid");
+  const grid = document.getElementById("news-grid");
   if (!grid) return;
 
   const status = document.createElement("p");
