@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#7b1e2b"><title>Newsroom Login | The Duggar Daily</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="newsroom.css">
+</head>
+<body class="dd-admin">
+<header class="dd-admin-header"><div class="dd-admin-header-inner"><div class="dd-admin-brand">THE DUGGAR DAILY<small>Private Editorial Newsroom</small></div><a href="index.html" style="color:#fff;font-size:12px">View newspaper ↗</a></div></header>
+<main class="dd-admin-shell">
+  <section id="login-panel" class="dd-panel dd-login">
+    <h1>Newsroom Login</h1><p class="dd-note">Sign in with an account authorised by the newspaper administrator.</p>
+    <div id="login-message" class="dd-alert dd-hidden"></div>
+    <form id="login-form">
+      <div class="dd-field"><label for="login-email">EMAIL ADDRESS</label><input id="login-email" type="email" autocomplete="username" required></div>
+      <div class="dd-field"><label for="login-password">PASSWORD</label><input id="login-password" type="password" autocomplete="current-password" required></div>
+      <button class="dd-btn" type="submit">SIGN IN TO NEWSROOM</button>
+    </form>
+    <p class="dd-note" style="margin-top:18px">Accounts are created by the administrator in Supabase Authentication. Public sign-up is disabled.</p>
+  </section>
+
+  <section id="dashboard" class="dd-hidden">
+    <div class="dd-admin-top"><div><p class="dd-note">THE DUGGAR DAILY / EDITORIAL DESK</p><h1>Newsroom Dashboard</h1></div><div class="dd-actions"><span id="signed-in-user" class="dd-note"></span><button id="logout-btn" class="dd-btn secondary">Sign out</button></div></div>
+    <div id="dashboard-message" class="dd-alert dd-hidden"></div>
+    <div class="dd-stats"><div class="dd-stat"><b id="count-published">0</b><span>Published</span></div><div class="dd-stat"><b id="count-drafts">0</b><span>Drafts</span></div><div class="dd-stat"><b id="count-total">0</b><span>Total stories</span></div></div>
+    <div class="dd-admin-grid">
+      <aside class="dd-panel"><nav class="dd-side-nav"><button class="active" data-view="editor">✍ New Article</button><button data-view="articles">▤ Manage Articles</button></nav><p class="dd-note" style="margin-top:20px">Only authorised newsroom users can create, edit, publish or delete articles.</p></aside>
+      <section class="dd-panel">
+        <div id="editor-view">
+          <h2 id="editor-heading" style="font:700 24px 'Playfair Display',Georgia,serif;margin-top:0">Write a new article</h2>
+          <form id="article-form">
+            <input type="hidden" id="article-id">
+            <div class="dd-field"><label for="title">HEADLINE *</label><input id="title" maxlength="180" required placeholder="Write a clear, accurate headline"></div>
+            <div class="dd-field"><label for="excerpt">SUBHEADLINE / SUMMARY</label><textarea id="excerpt" rows="3" style="min-height:80px" maxlength="400" placeholder="A concise summary for the homepage"></textarea></div>
+            <div class="dd-two-col">
+              <div class="dd-field"><label for="category">CATEGORY *</label><select id="category" required><option>Jammu</option><option>Duggar Region</option><option>Jammu & Kashmir</option><option>National</option><option>International</option><option>Politics</option><option>Business</option><option>Education</option><option>Sports</option><option>Culture</option><option>Technology</option><option>Weather</option></select></div>
+              <div class="dd-field"><label for="author">AUTHOR / DESK</label><input id="author" value="The Duggar Daily Desk" maxlength="100"></div>
+            </div>
+            <div class="dd-field"><label for="body">FULL ARTICLE *</label><textarea id="body" required placeholder="Write the article in your own words. Separate paragraphs with a blank line. Attribute claims and include relevant context."></textarea></div>
+            <div class="dd-two-col">
+              <div class="dd-field"><label for="image-file">FEATURED IMAGE</label><input id="image-file" type="file" accept="image/jpeg,image/png,image/webp"><span class="dd-note">JPG, PNG or WebP. Uploaded to the news-images storage bucket.</span></div>
+              <div class="dd-field"><label for="source-name">SOURCE NAME</label><input id="source-name" maxlength="120" placeholder="Official release / news agency / reporter"></div>
+            </div>
+            <div class="dd-field"><label for="source-url">SOURCE URL</label><input id="source-url" type="url" placeholder="https://…"></div>
+            <div id="image-current" class="dd-note"></div>
+            <div class="dd-actions"><button type="submit" class="dd-btn" id="save-draft">SAVE AS DRAFT</button><button type="button" class="dd-btn" id="publish-article">PUBLISH ARTICLE</button><button type="button" class="dd-btn secondary" id="reset-form">CLEAR FORM</button></div>
+            <p class="dd-note" style="margin-top:15px">Editorial reminder: verify dates, names, figures and allegations before publication. Use images you own or are licensed to publish. Publishing makes the article visible on the public website.</p>
+          </form>
+        </div>
+        <div id="articles-view" class="dd-hidden"><h2 style="font:700 24px 'Playfair Display',Georgia,serif;margin-top:0">Manage Articles</h2><div id="article-list" class="dd-article-list"></div></div>
+      </section>
+    </div>
+  </section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="newsroom-config.js"></script><script src="newsroom.js"></script>
+</body></html>
