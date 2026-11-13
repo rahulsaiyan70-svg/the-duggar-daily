@@ -3,8 +3,8 @@
   Paste your Supabase Project URL and anon/public key below.
   These are public browser credentials; NEVER put a service_role key here.
 */
-window.DD_SUPABASE_URL = "PASTE_SUPABASE_PROJECT_URL_HERE";
-window.DD_SUPABASE_ANON_KEY = "PASTE_SUPABASE_ANON_OR_PUBLISHABLE_KEY_HERE";
+window.DD_SUPABASE_URL = "https://vkssntjrbepntnjekoud.supabase.co";
+window.DD_SUPABASE_ANON_KEY = "sb_publishable_CNUuWm_yR_Yv6Vp08nFAYw_ldENN5Q5";
 
 window.ddSupabase = (() => {
   const ready = window.supabase &&
